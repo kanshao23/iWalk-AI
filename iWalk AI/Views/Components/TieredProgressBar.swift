@@ -41,30 +41,12 @@ struct TieredProgressBar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Top row: step count (left) + goal (right)
-            HStack(alignment: .firstTextBaseline) {
-                Text(currentSteps.formatted())
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.iwPrimary)
-                    .contentTransition(.numericText())
-                Spacer()
-                HStack(spacing: 4) {
-                    Image(systemName: "flag.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(currentSteps >= goalSteps ? Color.iwPrimary : Color.iwOutlineVariant)
-                    Text("/ \(goalSteps.formatted())")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.iwOutline)
-                    if let pg = personalGoal {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(pg.isReached ? Color.iwPrimary : Color.iwTertiary)
-                        Text("\(pg.targetSteps.formatted())")
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundStyle(Color.iwTertiary)
-                    }
-                }
-            }
+            // Step count
+            Text(currentSteps.formatted())
+                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.iwPrimary)
+                .contentTransition(.numericText())
+                .frame(maxWidth: .infinity, alignment: .center)
 
             // Walker icon
             Image(systemName: "figure.walk")
@@ -125,6 +107,32 @@ struct TieredProgressBar: View {
                 }
             }
             .frame(height: 50)
+
+            // Goals row below track
+            HStack(spacing: 16) {
+                // Daily goal
+                HStack(spacing: 4) {
+                    Image(systemName: "flag.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(currentSteps >= goalSteps ? Color.iwPrimary : Color.iwOutlineVariant)
+                    Text("Daily Goal: \(goalSteps.formatted())")
+                        .font(IWFont.labelMedium())
+                        .foregroundStyle(Color.iwOutline)
+                }
+
+                // Personal goal
+                if let pg = personalGoal {
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(pg.isReached ? Color.iwPrimary : Color.iwTertiary)
+                        Text("My Goal: \(pg.targetSteps.formatted())")
+                            .font(IWFont.labelMedium())
+                            .foregroundStyle(pg.isReached ? Color.iwPrimary : Color.iwTertiary)
+                    }
+                }
+            }
+            .padding(.top, 6)
 
             // Encouragement label
             HStack(spacing: 4) {
