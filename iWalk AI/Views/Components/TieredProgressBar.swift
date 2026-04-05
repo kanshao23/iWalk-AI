@@ -71,7 +71,7 @@ struct TieredProgressBar: View {
     // Medal colors
     private static let bronze = Color(hex: 0xCD7F32)
     private static let silver = Color(hex: 0xA8A9AD)
-    private static let gold = Color(hex: 0xFFD700)
+    private static let gold = Color(hex: 0xDAA520)
 
     private var ghostTargets: [GhostTarget] {
         [
