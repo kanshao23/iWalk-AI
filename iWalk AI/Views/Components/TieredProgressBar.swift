@@ -13,13 +13,15 @@ struct TieredProgressBar: View {
         min(Double(tier.stepsRequired) / Double(visualMax), 1.0)
     }
 
-    private var personalGoalPosition: Double? {
-        guard let pg = personalGoal else { return nil }
-        return min(Double(pg.targetSteps) / Double(visualMax), 1.0)
-    }
-
     private var walkerPosition: Double {
         min(Double(currentSteps) / Double(visualMax), 1.0)
+    }
+
+    /// Pixel offset for the walker icon (based on screen width ~350pt)
+    private var walkerOffset: CGFloat {
+        // Approximate: figure.walk at 128pt is ~60pt wide, offset from leading edge
+        let screenWidth: CGFloat = UIScreen.main.bounds.width - 40 // minus padding
+        return screenWidth * walkerPosition - 30
     }
 
     /// Expected progress based on time of day (7:00–23:00 waking hours)
@@ -39,26 +41,45 @@ struct TieredProgressBar: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Top row: step count (left) + goal (right)
+            HStack(alignment: .firstTextBaseline) {
+                Text(currentSteps.formatted())
+                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.iwPrimary)
+                    .contentTransition(.numericText())
+                Spacer()
+                HStack(spacing: 4) {
+                    Image(systemName: "flag.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(currentSteps >= goalSteps ? Color.iwPrimary : Color.iwOutlineVariant)
+                    Text("/ \(goalSteps.formatted())")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.iwOutline)
+                    if let pg = personalGoal {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(pg.isReached ? Color.iwPrimary : Color.iwTertiary)
+                        Text("\(pg.targetSteps.formatted())")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color.iwTertiary)
+                    }
+                }
+            }
+
+            // Walker icon
+            Image(systemName: "figure.walk")
+                .font(.system(size: 128, weight: .medium))
+                .foregroundStyle(Color.iwPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .offset(x: walkerOffset)
+                .padding(.top, -4)
+
+            // Track with tier markers
             GeometryReader { geo in
                 let trackWidth = geo.size.width
-                let trackY: CGFloat = 220
-                let walkerX = max(trackWidth * walkerPosition, 30)
-                let goalFlagX = trackWidth * min(Double(goalSteps) / Double(visualMax), 1.0)
+                let trackY: CGFloat = 10
 
                 ZStack(alignment: .leading) {
-                    // Step count above walker
-                    Text(currentSteps.formatted())
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.iwPrimary)
-                        .contentTransition(.numericText())
-                        .position(x: walkerX, y: trackY - 210)
-
-                    // Walker icon — feet well above the track
-                    Image(systemName: "figure.walk")
-                        .font(.system(size: 128, weight: .medium))
-                        .foregroundStyle(Color.iwPrimary)
-                        .position(x: walkerX, y: trackY - 110)
-
                     // Background track
                     RoundedRectangle(cornerRadius: 6)
                         .fill(Color.iwSurfaceContainerHigh)
@@ -101,33 +122,9 @@ struct TieredProgressBar: View {
                                 .position(x: x, y: trackY - 20)
                         }
                     }
-
-                    // Goal flag — well above the coin reward labels
-                    VStack(spacing: 2) {
-                        Image(systemName: "flag.fill")
-                            .font(.system(size: 18))
-                            .foregroundStyle(currentSteps >= goalSteps ? Color.iwPrimary : Color.iwOutlineVariant)
-                        Text(goalSteps.formatted())
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color.iwOutline)
-                    }
-                    .position(x: goalFlagX, y: trackY - 52)
-
-                    // Personal goal star — below the track to avoid overlapping with flag
-                    if let pgPos = personalGoalPosition {
-                        let pgX = trackWidth * pgPos
-                        HStack(spacing: 2) {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 14))
-                            Text("Goal")
-                                .font(.system(size: 10, weight: .medium, design: .rounded))
-                        }
-                        .foregroundStyle(personalGoal?.isReached == true ? Color.iwPrimary : Color.iwTertiary)
-                        .position(x: pgX, y: trackY + 22)
-                    }
                 }
             }
-            .frame(height: 260)
+            .frame(height: 50)
 
             // Encouragement label
             HStack(spacing: 4) {
