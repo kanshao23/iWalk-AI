@@ -53,13 +53,44 @@ struct TieredProgressBar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Walker + step count
+            // Walker + ghost target + step count
             GeometryReader { geo in
                 let totalWidth = geo.size.width
                 let walkerX = max(totalWidth * walkerPosition, 40)
+                let goalPosition = min(Double(goalSteps) / Double(visualMax), 1.0)
+                let goalX = totalWidth * goalPosition
+                let showGhost = currentSteps < goalSteps
 
                 ZStack {
-                    // Walker icon
+                    // Ghost walker at goal position (dashed outline)
+                    if showGhost {
+                        Image(systemName: "figure.walk")
+                            .font(.system(size: 128, weight: .medium))
+                            .foregroundStyle(Color.iwPrimary.opacity(0.12))
+                            .overlay(
+                                Image(systemName: "figure.walk")
+                                    .font(.system(size: 128, weight: .medium))
+                                    .foregroundStyle(.clear)
+                                    .overlay(
+                                        Image(systemName: "figure.walk")
+                                            .font(.system(size: 128, weight: .medium))
+                                            .foregroundStyle(Color.iwPrimary.opacity(0.25))
+                                            .mask(
+                                                StripedMask()
+                                                    .frame(width: 80, height: 150)
+                                            )
+                                    )
+                            )
+                            .position(x: goalX, y: 80)
+
+                        // Goal label below ghost
+                        Text(goalSteps.formatted())
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.iwOutlineVariant)
+                            .position(x: goalX, y: 166)
+                    }
+
+                    // Active walker icon
                     Image(systemName: "figure.walk")
                         .font(.system(size: 128, weight: .medium))
                         .foregroundStyle(Color.iwPrimary)
@@ -177,5 +208,21 @@ struct TieredProgressBar: View {
             return "\(steps / 1000)k"
         }
         return "\(steps)"
+    }
+}
+
+// MARK: - Striped mask for dashed ghost effect
+
+private struct StripedMask: View {
+    var body: some View {
+        Canvas { context, size in
+            let spacing: CGFloat = 5
+            var y: CGFloat = 0
+            while y < size.height {
+                let rect = CGRect(x: 0, y: y, width: size.width, height: 2.5)
+                context.fill(Path(rect), with: .color(.white))
+                y += spacing
+            }
+        }
     }
 }
