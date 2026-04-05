@@ -17,13 +17,6 @@ struct TieredProgressBar: View {
         min(Double(currentSteps) / Double(visualMax), 1.0)
     }
 
-    /// Pixel offset for the walker icon (based on screen width ~350pt)
-    private var walkerOffset: CGFloat {
-        // Approximate: figure.walk at 128pt is ~60pt wide, offset from leading edge
-        let screenWidth: CGFloat = UIScreen.main.bounds.width - 40 // minus padding
-        return screenWidth * walkerPosition - 30
-    }
-
     /// Expected progress based on time of day (7:00–23:00 waking hours)
     private var expectedProgress: Double {
         let cal = Calendar.current
@@ -45,34 +38,32 @@ struct TieredProgressBar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Walker with speech bubble
+            // Walker + bubble + step count — all positioned together
             GeometryReader { geo in
                 let totalWidth = geo.size.width
-                let walkerX = max(totalWidth * walkerPosition, 30)
-                // Bubble sits to the right of the walker's head
-                let bubbleX = min(walkerX + 70, totalWidth - 80)
+                let walkerX = max(totalWidth * walkerPosition, 40)
+                let bubbleX = min(walkerX + 50, totalWidth - 70)
 
-                ZStack(alignment: .topLeading) {
+                ZStack {
+                    // Speech bubble — top right of walker's head
+                    SpeechBubble(text: encouragementText, isPositive: isAheadOfSchedule)
+                        .position(x: bubbleX, y: 20)
+
                     // Walker icon
                     Image(systemName: "figure.walk")
                         .font(.system(size: 128, weight: .medium))
                         .foregroundStyle(Color.iwPrimary)
-                        .position(x: walkerX, y: 80)
+                        .position(x: walkerX, y: 100)
 
-                    // Speech bubble
-                    SpeechBubble(text: encouragementText, isPositive: isAheadOfSchedule)
-                        .position(x: bubbleX, y: 16)
+                    // Step count — directly below walker, follows walker
+                    Text(currentSteps.formatted())
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.iwPrimary)
+                        .contentTransition(.numericText())
+                        .position(x: walkerX, y: 185)
                 }
             }
-            .frame(height: 160)
-
-            // Step count below walker
-            Text(currentSteps.formatted())
-                .font(.system(size: 36, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.iwPrimary)
-                .contentTransition(.numericText())
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.bottom, 8)
+            .frame(height: 210)
 
             // Track with tier markers
             GeometryReader { geo in
@@ -163,45 +154,67 @@ struct TieredProgressBar: View {
     }
 }
 
-// MARK: - Speech Bubble
+// MARK: - Speech Bubble (comic style with tail)
 
 private struct SpeechBubble: View {
     let text: String
     let isPositive: Bool
 
+    private var bubbleColor: Color {
+        isPositive ? Color.iwPrimaryFixed.opacity(0.4) : Color.iwTertiaryFixed.opacity(0.4)
+    }
+
+    private var textColor: Color {
+        isPositive ? Color.iwPrimary : Color.iwTertiary
+    }
+
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: isPositive ? "checkmark.circle.fill" : "clock.badge.exclamationmark")
-                .font(.system(size: 11))
-            Text(text)
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+        VStack(spacing: 0) {
+            // Bubble body
+            HStack(spacing: 4) {
+                Image(systemName: isPositive ? "checkmark.circle.fill" : "clock.badge.exclamationmark")
+                    .font(.system(size: 11))
+                Text(text)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+            }
+            .foregroundStyle(textColor)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(bubbleColor)
+            .clipShape(BubbleShape())
+
+            // Tail
+            BubbleTail()
+                .fill(bubbleColor)
+                .frame(width: 16, height: 10)
+                .offset(x: -30)
         }
-        .foregroundStyle(isPositive ? Color.iwPrimary : Color.iwTertiary)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            isPositive
-                ? Color.iwPrimaryFixed.opacity(0.3)
-                : Color.iwTertiaryFixed.opacity(0.3)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            // Bubble tail pointing down-left toward walker's head
-            Triangle()
-                .fill(isPositive ? Color.iwPrimaryFixed.opacity(0.3) : Color.iwTertiaryFixed.opacity(0.3))
-                .frame(width: 12, height: 8)
-                .offset(x: -20, y: 4),
-            alignment: .bottom
-        )
     }
 }
 
-private struct Triangle: Shape {
+// Rounded rectangle bubble shape
+private struct BubbleShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        RoundedRectangle(cornerRadius: 16).path(in: rect)
+    }
+}
+
+// Comic-style tail pointing down-left
+private struct BubbleTail: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        path.move(to: CGPoint(x: rect.midX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        // Start from top-left of tail area
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        // Curve down to the tip
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX + 2, y: rect.maxY),
+            control: CGPoint(x: rect.minX, y: rect.midY)
+        )
+        // Go back up to top-right
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX, y: rect.minY),
+            control: CGPoint(x: rect.midX, y: rect.midY)
+        )
         path.closeSubpath()
         return path
     }
