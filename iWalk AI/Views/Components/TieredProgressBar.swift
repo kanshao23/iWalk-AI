@@ -39,22 +39,40 @@ struct TieredProgressBar: View {
         return goalProgress >= expectedProgress
     }
 
+    private var encouragementText: String {
+        isAheadOfSchedule ? "Ahead of schedule!" : "A bit behind — let's walk!"
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            // Step count
+            // Walker with speech bubble
+            GeometryReader { geo in
+                let totalWidth = geo.size.width
+                let walkerX = max(totalWidth * walkerPosition, 30)
+                // Bubble sits to the right of the walker's head
+                let bubbleX = min(walkerX + 70, totalWidth - 80)
+
+                ZStack(alignment: .topLeading) {
+                    // Walker icon
+                    Image(systemName: "figure.walk")
+                        .font(.system(size: 128, weight: .medium))
+                        .foregroundStyle(Color.iwPrimary)
+                        .position(x: walkerX, y: 80)
+
+                    // Speech bubble
+                    SpeechBubble(text: encouragementText, isPositive: isAheadOfSchedule)
+                        .position(x: bubbleX, y: 16)
+                }
+            }
+            .frame(height: 160)
+
+            // Step count below walker
             Text(currentSteps.formatted())
                 .font(.system(size: 36, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.iwPrimary)
                 .contentTransition(.numericText())
                 .frame(maxWidth: .infinity, alignment: .center)
-
-            // Walker icon
-            Image(systemName: "figure.walk")
-                .font(.system(size: 128, weight: .medium))
-                .foregroundStyle(Color.iwPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .offset(x: walkerOffset)
-                .padding(.top, -4)
+                .padding(.bottom, 8)
 
             // Track with tier markers
             GeometryReader { geo in
@@ -110,7 +128,6 @@ struct TieredProgressBar: View {
 
             // Goals row below track
             HStack(spacing: 16) {
-                // Daily goal
                 HStack(spacing: 4) {
                     Image(systemName: "flag.fill")
                         .font(.system(size: 12))
@@ -120,7 +137,6 @@ struct TieredProgressBar: View {
                         .foregroundStyle(Color.iwOutline)
                 }
 
-                // Personal goal
                 if let pg = personalGoal {
                     HStack(spacing: 4) {
                         Image(systemName: "star.fill")
@@ -133,16 +149,6 @@ struct TieredProgressBar: View {
                 }
             }
             .padding(.top, 6)
-
-            // Encouragement label
-            HStack(spacing: 4) {
-                Image(systemName: isAheadOfSchedule ? "checkmark.circle.fill" : "clock.badge.exclamationmark")
-                    .font(.system(size: 12))
-                Text(isAheadOfSchedule ? "Ahead of schedule!" : "A bit behind — let's walk!")
-                    .font(IWFont.labelSmall())
-            }
-            .foregroundStyle(isAheadOfSchedule ? Color.iwPrimary : Color.iwTertiary)
-            .padding(.top, 4)
         }
         .padding(.vertical, 8)
         .accessibilityElement(children: .ignore)
@@ -154,5 +160,49 @@ struct TieredProgressBar: View {
             return "\(steps / 1000)k"
         }
         return "\(steps)"
+    }
+}
+
+// MARK: - Speech Bubble
+
+private struct SpeechBubble: View {
+    let text: String
+    let isPositive: Bool
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: isPositive ? "checkmark.circle.fill" : "clock.badge.exclamationmark")
+                .font(.system(size: 11))
+            Text(text)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+        }
+        .foregroundStyle(isPositive ? Color.iwPrimary : Color.iwTertiary)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            isPositive
+                ? Color.iwPrimaryFixed.opacity(0.3)
+                : Color.iwTertiaryFixed.opacity(0.3)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            // Bubble tail pointing down-left toward walker's head
+            Triangle()
+                .fill(isPositive ? Color.iwPrimaryFixed.opacity(0.3) : Color.iwTertiaryFixed.opacity(0.3))
+                .frame(width: 12, height: 8)
+                .offset(x: -20, y: 4),
+            alignment: .bottom
+        )
+    }
+}
+
+private struct Triangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.closeSubpath()
+        return path
     }
 }
