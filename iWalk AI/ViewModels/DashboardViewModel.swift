@@ -3,8 +3,9 @@ import SwiftUI
 @Observable
 final class DashboardViewModel {
     var user = UserProfile.mock
-    var todayStats = DailyStats.mockToday
+    var todayStats = DailyStats(date: .now, steps: 0, calories: 0, distanceKm: 0, activeMinutes: 0, heartRate: nil)
     var weeklyActivity = DailyStats.mockWeek
+    var hasLoadedRealData = false
     var healthTips = HealthTip.mockTips
     var currentTipIndex = 0
 
@@ -75,12 +76,11 @@ final class DashboardViewModel {
         let weekly = await healthKit.fetchWeeklySteps()
 
         await MainActor.run {
-            if steps > 0 {
-                todayStats.steps = steps
-                todayStats.distanceKm = distance
-                todayStats.calories = calories > 0 ? calories : steps / 20
-                todayStats.activeMinutes = steps / 200
-            }
+            hasLoadedRealData = true
+            todayStats.steps = steps
+            todayStats.distanceKm = distance > 0 ? distance : Double(steps) / 1400.0
+            todayStats.calories = calories > 0 ? calories : steps / 20
+            todayStats.activeMinutes = steps / 200
             if !weekly.isEmpty {
                 weeklyActivity = weekly
             }

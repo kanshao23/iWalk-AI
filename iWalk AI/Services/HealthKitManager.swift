@@ -54,9 +54,10 @@ final class HealthKitManager {
     func fetchTodaySteps() async -> Int {
         guard let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return 0 }
         let start = Calendar.current.startOfDay(for: .now)
+        let end = Date.now
 
         return await withCheckedContinuation { continuation in
-            let predicate = HKQuery.predicateForSamples(withStart: start, end: .now, options: .strictStartDate)
+            let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: [.strictStartDate, .strictEndDate])
             let query = HKStatisticsQuery(quantityType: stepType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
                 let steps = result?.sumQuantity()?.doubleValue(for: .count()) ?? 0
                 continuation.resume(returning: Int(steps))
@@ -70,9 +71,10 @@ final class HealthKitManager {
     func fetchTodayDistance() async -> Double {
         guard let distType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning) else { return 0 }
         let start = Calendar.current.startOfDay(for: .now)
+        let end = Date.now
 
         return await withCheckedContinuation { continuation in
-            let predicate = HKQuery.predicateForSamples(withStart: start, end: .now, options: .strictStartDate)
+            let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: [.strictStartDate, .strictEndDate])
             let query = HKStatisticsQuery(quantityType: distType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
                 let meters = result?.sumQuantity()?.doubleValue(for: .meter()) ?? 0
                 continuation.resume(returning: meters / 1000.0)
@@ -86,9 +88,10 @@ final class HealthKitManager {
     func fetchTodayCalories() async -> Int {
         guard let calType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) else { return 0 }
         let start = Calendar.current.startOfDay(for: .now)
+        let end = Date.now
 
         return await withCheckedContinuation { continuation in
-            let predicate = HKQuery.predicateForSamples(withStart: start, end: .now, options: .strictStartDate)
+            let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: [.strictStartDate, .strictEndDate])
             let query = HKStatisticsQuery(quantityType: calType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
                 let cal = result?.sumQuantity()?.doubleValue(for: .kilocalorie()) ?? 0
                 continuation.resume(returning: Int(cal))
