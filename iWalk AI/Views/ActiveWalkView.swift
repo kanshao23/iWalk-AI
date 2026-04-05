@@ -95,7 +95,8 @@ private struct ActiveWalkContent: View {
                     currentSteps: vm.totalSteps,
                     goalSteps: vm.dailyGoal,
                     lineWidth: 14,
-                    animatedProgress: vm.goalProgress
+                    animatedProgress: vm.goalProgress,
+                    onDarkBackground: true
                 )
                 .frame(width: 220, height: 220)
             }
@@ -282,7 +283,8 @@ private struct WalkSummaryContent: View {
                         currentSteps: session.stepsBeforeWalk,
                         goalSteps: session.dailyGoal,
                         lineWidth: 10,
-                        animatedProgress: session.goalProgressBefore
+                        animatedProgress: session.goalProgressBefore,
+                        onDarkBackground: true
                     )
                     .opacity(0.3)
                     .frame(width: 160, height: 160)
@@ -292,7 +294,8 @@ private struct WalkSummaryContent: View {
                         currentSteps: session.totalSteps,
                         goalSteps: session.dailyGoal,
                         lineWidth: 12,
-                        animatedProgress: ringAnimated ? session.goalProgressAfter : session.goalProgressBefore
+                        animatedProgress: ringAnimated ? session.goalProgressAfter : session.goalProgressBefore,
+                        onDarkBackground: true
                     )
                     .frame(width: 160, height: 160)
                 }
@@ -392,40 +395,15 @@ private struct WalkBackground: View {
     let progress: Double
     let isPaused: Bool
 
-    @State private var phase: CGFloat = 0
-
     var body: some View {
-        ZStack {
-            // Base gradient
-            LinearGradient(
-                colors: [
-                    Color.iwPrimary.opacity(0.8 + progress * 0.2),
-                    Color(hex: 0x0A1F18),
-                    Color(hex: 0x0D0D0F),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            // Ambient glow that shifts with progress
-            RadialGradient(
-                colors: [
-                    Color.iwPrimaryContainer.opacity(0.15 + progress * 0.15),
-                    .clear,
-                ],
-                center: UnitPoint(x: 0.3 + phase * 0.4, y: 0.2),
-                startRadius: 50,
-                endRadius: 350
-            )
-        }
-        .animation(.easeInOut(duration: 3.0), value: progress)
-        .onAppear {
-            withAnimation(.easeInOut(duration: 6.0).repeatForever(autoreverses: true)) {
-                phase = 1.0
-            }
-        }
-        .onChange(of: isPaused) {
-            // Animation naturally continues/pauses with SwiftUI
-        }
+        LinearGradient(
+            colors: [
+                Color(hex: 0x1A1A2E),
+                Color(hex: 0x16213E),
+                Color(hex: 0x0F0F1A),
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
 }
