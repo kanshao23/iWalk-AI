@@ -94,21 +94,21 @@ private struct ActiveWalkContent: View {
                 StepProgressRing(
                     currentSteps: vm.totalSteps,
                     goalSteps: vm.dailyGoal,
-                    lineWidth: 12,
+                    lineWidth: 14,
                     animatedProgress: vm.goalProgress
                 )
-                .frame(width: 200, height: 200)
+                .frame(width: 220, height: 220)
             }
 
             // Session steps
-            VStack(spacing: 2) {
+            VStack(spacing: 4) {
                 Text("+\(vm.sessionSteps.formatted())")
-                    .font(IWFont.headlineMedium())
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.iwPrimaryFixed)
                     .contentTransition(.numericText())
                 Text("steps this walk")
-                    .font(IWFont.labelMedium())
-                    .foregroundStyle(.white.opacity(0.6))
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.7))
             }
             .padding(.top, 12)
 
@@ -178,22 +178,22 @@ private struct WalkStatCell: View {
     let iconColor: Color
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.system(size: 18))
+                .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(iconColor)
             Text(value)
-                .font(IWFont.titleMedium())
+                .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .contentTransition(.numericText())
                 .monospacedDigit()
             Text(label)
-                .font(IWFont.labelSmall())
-                .foregroundStyle(.white.opacity(0.6))
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.7))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(.ultraThinMaterial)
+        .padding(.vertical, 18)
+        .background(.white.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 }
@@ -204,23 +204,23 @@ private struct HeartRateStatCell: View {
     let zoneColor: Color
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             Image(systemName: "heart.fill")
-                .font(.system(size: 18))
+                .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(zoneColor)
                 .symbolEffect(.pulse)
             Text("\(bpm)")
-                .font(IWFont.titleMedium())
+                .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .contentTransition(.numericText())
                 .monospacedDigit()
             Text(zone)
-                .font(IWFont.labelSmall())
+                .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(zoneColor)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(.ultraThinMaterial)
+        .padding(.vertical, 18)
+        .background(.white.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 }
