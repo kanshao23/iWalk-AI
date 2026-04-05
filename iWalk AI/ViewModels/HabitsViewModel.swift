@@ -20,6 +20,8 @@ final class HabitsViewModel {
         quotes[currentQuoteIndex % quotes.count]
     }
 
+    private let healthKit = HealthKitManager.shared
+
     init() {
         let now = Date.now
         let calendar = Calendar.current
@@ -30,16 +32,25 @@ final class HabitsViewModel {
         self.monthData = MonthlyHabitData.mock(year: year, month: month)
     }
 
-    func goToPreviousMonth() {
-        withAnimation(.easeInOut(duration: 0.3)) {
-            if currentMonth == 1 {
-                currentMonth = 12
-                currentYear -= 1
-            } else {
-                currentMonth -= 1
+    /// Load real monthly data from HealthKit
+    func loadRealData() async {
+        guard healthKit.isAuthorized else { return }
+        let days = await healthKit.fetchMonthlySteps(year: currentYear, month: currentMonth)
+        if !days.isEmpty {
+            await MainActor.run {
+                monthData = MonthlyHabitData(year: currentYear, month: currentMonth, days: days)
             }
-            monthData = MonthlyHabitData.mock(year: currentYear, month: currentMonth)
         }
+    }
+
+    func goToPreviousMonth() {
+        if currentMonth == 1 {
+            currentMonth = 12
+            currentYear -= 1
+        } else {
+            currentMonth -= 1
+        }
+        reloadMonth()
     }
 
     func goToNextMonth() {
@@ -48,18 +59,23 @@ final class HabitsViewModel {
         let nowYear = calendar.component(.year, from: now)
         let nowMonth = calendar.component(.month, from: now)
 
-        // Don't go beyond current month
         if currentYear == nowYear && currentMonth >= nowMonth { return }
 
+        if currentMonth == 12 {
+            currentMonth = 1
+            currentYear += 1
+        } else {
+            currentMonth += 1
+        }
+        reloadMonth()
+    }
+
+    private func reloadMonth() {
+        // Start with mock, then try real data
         withAnimation(.easeInOut(duration: 0.3)) {
-            if currentMonth == 12 {
-                currentMonth = 1
-                currentYear += 1
-            } else {
-                currentMonth += 1
-            }
             monthData = MonthlyHabitData.mock(year: currentYear, month: currentMonth)
         }
+        Task { await loadRealData() }
     }
 
     func selectDay(_ day: HabitDay) {

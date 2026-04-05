@@ -162,6 +162,15 @@ struct DashboardView: View {
             }
             vm.generateEveningReview(coinVM: coinVM, streakVM: streakVM, journeyVM: journeyVM)
         }
+        .task {
+            // Load real HealthKit data
+            await vm.loadRealData()
+            // Re-check tiers with real steps
+            coinVM.checkStepTiers(currentSteps: vm.currentSteps)
+            if vm.currentSteps >= 1500 {
+                streakVM.completeTodayIfNeeded(coinVM: coinVM)
+            }
+        }
         .sheet(isPresented: $vm.showHistory) {
             HistorySheet(weeklyActivity: vm.weeklyActivity)
         }

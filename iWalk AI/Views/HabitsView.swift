@@ -259,6 +259,7 @@ struct HabitsView: View {
         }
         .background(Color.iwSurface)
         .onAppear { vm.animateOnAppear() }
+        .task { await vm.loadRealData() }
     }
 
     // MARK: - Medal system

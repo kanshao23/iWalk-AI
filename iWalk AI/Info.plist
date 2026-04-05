@@ -2,9 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-	</array>
+	<key>NSMotionUsageDescription</key>
+	<string>iWalk AI uses motion data to count your steps and track walking distance in real time.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>iWalk AI reads your step count, distance, calories, and heart rate to track your walking progress and provide personalized insights.</string>
 </dict>
 </plist>

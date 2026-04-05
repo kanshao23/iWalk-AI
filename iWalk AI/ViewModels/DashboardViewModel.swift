@@ -52,11 +52,40 @@ final class DashboardViewModel {
         return weeklyActivity.isEmpty ? 0 : total / weeklyActivity.count
     }
 
+    private let healthKit = HealthKitManager.shared
+
     func animateOnAppear() {
         withAnimation(.easeOut(duration: 1.2)) {
             animatedProgress = targetProgress
         }
         animateStepCount()
+    }
+
+    /// Load real data from HealthKit (falls back to mock if unavailable)
+    func loadRealData() async {
+        guard healthKit.isAuthorized else { return }
+
+        let steps = await healthKit.fetchTodaySteps()
+        let distance = await healthKit.fetchTodayDistance()
+        let calories = await healthKit.fetchTodayCalories()
+        let weekly = await healthKit.fetchWeeklySteps()
+
+        await MainActor.run {
+            if steps > 0 {
+                todayStats.steps = steps
+                todayStats.distanceKm = distance
+                todayStats.calories = calories > 0 ? calories : steps / 20
+                todayStats.activeMinutes = steps / 200
+            }
+            if !weekly.isEmpty {
+                weeklyActivity = weekly
+            }
+            // Re-animate with real values
+            animatedSteps = todayStats.steps
+            withAnimation(.easeOut(duration: 0.6)) {
+                animatedProgress = targetProgress
+            }
+        }
     }
 
     private func animateStepCount() {
@@ -78,7 +107,14 @@ final class DashboardViewModel {
     }
 
     func startWalking() {
-        showActiveWalk = true
+        Task {
+            if !healthKit.isAuthorized {
+                _ = await healthKit.requestAuthorization()
+            }
+            await MainActor.run {
+                showActiveWalk = true
+            }
+        }
     }
 
     func onWalkCompleted(session: WalkSession) {
