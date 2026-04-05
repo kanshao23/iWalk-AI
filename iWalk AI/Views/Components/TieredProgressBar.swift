@@ -32,42 +32,64 @@ struct TieredProgressBar: View {
         return goalProgress >= expectedProgress
     }
 
-    private var encouragementText: String {
-        isAheadOfSchedule ? "Ahead of schedule!" : "A bit behind — let's walk!"
+    private var aiInsight: String {
+        let remaining = goalSteps - currentSteps
+        let goalProgress = Double(currentSteps) / Double(goalSteps)
+
+        if goalProgress >= 1.0 {
+            return "Goal crushed! Keep going to earn bonus tier coins."
+        } else if goalProgress >= 0.75 {
+            return "Almost there! Just \(remaining.formatted()) steps to your daily goal."
+        } else if isAheadOfSchedule {
+            return "Great pace! You're ahead of schedule — \(Int(goalProgress * 100))% done."
+        } else if goalProgress >= 0.5 {
+            return "Halfway there! A 15-min walk will get you back on track."
+        } else if goalProgress >= 0.25 {
+            return "Good start! Try a walk after lunch to boost your progress."
+        } else {
+            return "Let's get moving! A short walk can lift your energy and mood."
+        }
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Walker + bubble + step count
+            // Walker + step count
             GeometryReader { geo in
                 let totalWidth = geo.size.width
                 let walkerX = max(totalWidth * walkerPosition, 40)
-                // Bubble offset to the right, clamped to screen
-                let bubbleX = min(walkerX + 60, totalWidth - 80)
 
                 ZStack {
-                    // Speech bubble — floating above with gap
-                    SpeechBubble(text: encouragementText, isPositive: isAheadOfSchedule)
-                        .position(x: bubbleX, y: 22)
-
                     // Walker icon
                     Image(systemName: "figure.walk")
                         .font(.system(size: 128, weight: .medium))
                         .foregroundStyle(Color.iwPrimary)
-                        .position(x: walkerX, y: 115)
+                        .position(x: walkerX, y: 80)
 
-                    // Step count — below walker with gap
+                    // Step count — below walker, follows walker
                     Text(currentSteps.formatted())
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.iwPrimary)
                         .contentTransition(.numericText())
-                        .position(x: walkerX, y: 200)
+                        .position(x: walkerX, y: 166)
                 }
             }
-            .frame(height: 225)
+            .frame(height: 190)
 
-            // Spacer between steps and track
-            Spacer().frame(height: 16)
+            // AI insight card — centered
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.iwPrimary)
+                Text(aiInsight)
+                    .font(IWFont.labelMedium())
+                    .foregroundStyle(Color.iwOnSurfaceVariant)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(Color.iwSurfaceContainerLow)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .padding(.bottom, 16)
 
             // Track with tier markers
             GeometryReader { geo in
@@ -155,82 +177,5 @@ struct TieredProgressBar: View {
             return "\(steps / 1000)k"
         }
         return "\(steps)"
-    }
-}
-
-// MARK: - Speech Bubble (comic style with pointed tail)
-
-private struct SpeechBubble: View {
-    let text: String
-    let isPositive: Bool
-
-    private var bubbleColor: Color {
-        isPositive ? Color.iwPrimaryFixed.opacity(0.4) : Color.iwTertiaryFixed.opacity(0.4)
-    }
-
-    private var borderColor: Color {
-        isPositive ? Color.iwPrimary.opacity(0.3) : Color.iwTertiary.opacity(0.3)
-    }
-
-    private var textColor: Color {
-        isPositive ? Color.iwPrimary : Color.iwTertiary
-    }
-
-    var body: some View {
-        HStack(spacing: 5) {
-            Image(systemName: isPositive ? "checkmark.circle.fill" : "clock.badge.exclamationmark")
-                .font(.system(size: 12))
-            Text(text)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-        }
-        .foregroundStyle(textColor)
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
-        .background(
-            ComicBubbleShape(tailOffset: -30)
-                .fill(bubbleColor)
-        )
-        .background(
-            ComicBubbleShape(tailOffset: -30)
-                .stroke(borderColor, lineWidth: 1)
-        )
-    }
-}
-
-/// Rounded-rect bubble with a small curved tail at the bottom
-private struct ComicBubbleShape: Shape {
-    let tailOffset: CGFloat // negative = left of center
-
-    func path(in rect: CGRect) -> Path {
-        let cornerRadius: CGFloat = 18
-        let tailWidth: CGFloat = 14
-        let tailHeight: CGFloat = 10
-
-        var path = Path()
-        let bubbleRect = CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height - tailHeight)
-
-        // Main rounded rect
-        path.addRoundedRect(in: bubbleRect, cornerSize: CGSize(width: cornerRadius, height: cornerRadius))
-
-        // Tail at bottom
-        let tailCenterX = bubbleRect.midX + tailOffset
-        let tailLeft = tailCenterX - tailWidth / 2
-        let tailRight = tailCenterX + tailWidth / 2
-        let tailTip = CGPoint(x: tailCenterX - 6, y: rect.maxY)
-
-        var tailPath = Path()
-        tailPath.move(to: CGPoint(x: tailLeft, y: bubbleRect.maxY - 1))
-        tailPath.addQuadCurve(
-            to: tailTip,
-            control: CGPoint(x: tailLeft - 2, y: bubbleRect.maxY + tailHeight / 2)
-        )
-        tailPath.addQuadCurve(
-            to: CGPoint(x: tailRight, y: bubbleRect.maxY - 1),
-            control: CGPoint(x: tailCenterX + 4, y: bubbleRect.maxY + 2)
-        )
-        tailPath.closeSubpath()
-
-        path.addPath(tailPath)
-        return path
     }
 }
