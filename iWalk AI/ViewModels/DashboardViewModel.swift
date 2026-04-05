@@ -54,6 +54,48 @@ final class DashboardViewModel {
     }
 
     private let healthKit = HealthKitManager.shared
+    private var refreshTimer: Timer?
+
+    // MARK: - Auto Refresh (every 30s + foreground)
+
+    func startAutoRefresh(coinVM: CoinViewModel, streakVM: StreakViewModel) {
+        stopAutoRefresh()
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            self?.refreshFromHealthKit(coinVM: coinVM, streakVM: streakVM)
+        }
+    }
+
+    func stopAutoRefresh() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+
+    func refreshFromHealthKit(coinVM: CoinViewModel, streakVM: StreakViewModel) {
+        Task {
+            guard healthKit.isAuthorized else { return }
+            let steps = await healthKit.fetchTodaySteps()
+            let distance = await healthKit.fetchTodayDistance()
+            let calories = await healthKit.fetchTodayCalories()
+
+            await MainActor.run {
+                todayStats.steps = steps
+                todayStats.distanceKm = distance > 0 ? distance : Double(steps) / 1400.0
+                todayStats.calories = calories > 0 ? calories : steps / 20
+                todayStats.activeMinutes = steps / 200
+
+                withAnimation(.easeOut(duration: 0.3)) {
+                    animatedSteps = todayStats.steps
+                    animatedProgress = targetProgress
+                }
+
+                // Check tiers & streak with latest steps
+                coinVM.checkStepTiers(currentSteps: steps)
+                if steps >= 1500 {
+                    streakVM.completeTodayIfNeeded(coinVM: coinVM)
+                }
+            }
+        }
+    }
 
     func animateOnAppear() {
         withAnimation(.easeOut(duration: 1.2)) {

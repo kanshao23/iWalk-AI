@@ -161,11 +161,16 @@ struct DashboardView: View {
                 streakVM.completeTodayIfNeeded(coinVM: coinVM)
             }
             vm.generateEveningReview(coinVM: coinVM, streakVM: streakVM, journeyVM: journeyVM)
+            vm.startAutoRefresh(coinVM: coinVM, streakVM: streakVM)
+        }
+        .onDisappear {
+            vm.stopAutoRefresh()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            vm.refreshFromHealthKit(coinVM: coinVM, streakVM: streakVM)
         }
         .task {
-            // Load real HealthKit data
             await vm.loadRealData()
-            // Re-check tiers with real steps
             coinVM.checkStepTiers(currentSteps: vm.currentSteps)
             if vm.currentSteps >= 1500 {
                 streakVM.completeTodayIfNeeded(coinVM: coinVM)
