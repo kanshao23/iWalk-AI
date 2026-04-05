@@ -115,7 +115,7 @@ struct HabitsView: View {
                                 Text("").frame(width: 36, height: 36)
                             }
 
-                            // Days of month — medal colors based on steps
+                            // Days of month — medal icons based on steps
                             ForEach(1...vm.monthData.daysInMonth, id: \.self) { day in
                                 let habitDay = vm.monthData.days.first { $0.dayNumber == day }
                                 let steps = habitDay?.steps ?? 0
@@ -123,18 +123,31 @@ struct HabitsView: View {
                                 let isSelected = vm.selectedDay?.dayNumber == day
                                 let isFuture = habitDay == nil || (habitDay?.completion == HabitCompletion.none && steps == 0 && day > Calendar.current.component(.day, from: .now))
 
-                                ZStack {
-                                    Circle()
-                                        .fill(isFuture ? Color.iwSurfaceContainerLow : medal.color)
-                                        .frame(width: 36, height: 36)
-                                    if isSelected {
+                                VStack(spacing: 2) {
+                                    ZStack {
                                         Circle()
-                                            .stroke(Color.iwPrimary, lineWidth: 2)
-                                            .frame(width: 38, height: 38)
+                                            .fill(isFuture ? Color.iwSurfaceContainerLow : medal.color.opacity(0.15))
+                                            .frame(width: 36, height: 36)
+                                        if isSelected {
+                                            Circle()
+                                                .stroke(medal.color, lineWidth: 2)
+                                                .frame(width: 38, height: 38)
+                                        }
+                                        if !isFuture && medal.emoji != nil {
+                                            Text(medal.emoji!)
+                                                .font(.system(size: 18))
+                                        } else {
+                                            Text("\(day)")
+                                                .font(IWFont.labelMedium())
+                                                .foregroundStyle(Color.iwOnSurface)
+                                        }
                                     }
-                                    Text("\(day)")
-                                        .font(IWFont.labelMedium())
-                                        .foregroundStyle(isFuture ? Color.iwOnSurface : (medal.textWhite ? .white : Color.iwOnSurface))
+                                    // Day number below medal
+                                    if !isFuture && medal.emoji != nil {
+                                        Text("\(day)")
+                                            .font(.system(size: 9, weight: .medium, design: .rounded))
+                                            .foregroundStyle(Color.iwOutline)
+                                    }
                                 }
                                 .onTapGesture {
                                     if let habitDay {
@@ -170,40 +183,62 @@ struct HabitsView: View {
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
 
-                        // Stats Row
+                        // Medal stats
+                        let medalCounts = countMedals(vm.monthData.days)
                         HStack(spacing: 0) {
                             VStack(spacing: 2) {
-                                Text("\(vm.monthData.completedDays)")
+                                Text("🥉")
+                                    .font(.system(size: 20))
+                                Text("\(medalCounts.bronze)")
                                     .font(IWFont.titleMedium())
-                                    .foregroundStyle(Color.iwOnSurface)
+                                    .foregroundStyle(Self.bronze)
                                     .contentTransition(.numericText())
-                                Text("DAYGOAL")
-                                    .font(IWFont.labelSmall())
-                                    .foregroundStyle(Color.iwOutline)
                             }
                             .frame(maxWidth: .infinity)
                             VStack(spacing: 2) {
-                                Text("\(Int(vm.monthData.completionRate * 100))%")
+                                Text("🥈")
+                                    .font(.system(size: 20))
+                                Text("\(medalCounts.silver)")
                                     .font(IWFont.titleMedium())
-                                    .foregroundStyle(Color.iwOnSurface)
+                                    .foregroundStyle(Self.silver)
                                     .contentTransition(.numericText())
-                                Text("COMPLETION")
-                                    .font(IWFont.labelSmall())
-                                    .foregroundStyle(Color.iwOutline)
                             }
                             .frame(maxWidth: .infinity)
                             VStack(spacing: 2) {
-                                Text("\(vm.monthData.averageSteps / 1000)k")
+                                Text("🥇")
+                                    .font(.system(size: 20))
+                                Text("\(medalCounts.gold)")
                                     .font(IWFont.titleMedium())
-                                    .foregroundStyle(Color.iwOnSurface)
+                                    .foregroundStyle(Self.gold)
                                     .contentTransition(.numericText())
-                                Text("AVG STEPS")
-                                    .font(IWFont.labelSmall())
-                                    .foregroundStyle(Color.iwOutline)
+                            }
+                            .frame(maxWidth: .infinity)
+                            VStack(spacing: 2) {
+                                Text("💎")
+                                    .font(.system(size: 20))
+                                Text("\(medalCounts.diamond)")
+                                    .font(IWFont.titleMedium())
+                                    .foregroundStyle(Self.diamond)
+                                    .contentTransition(.numericText())
+                            }
+                            .frame(maxWidth: .infinity)
+                            VStack(spacing: 2) {
+                                Text("👑")
+                                    .font(.system(size: 20))
+                                Text("\(medalCounts.legend)")
+                                    .font(IWFont.titleMedium())
+                                    .foregroundStyle(Self.legendary)
+                                    .contentTransition(.numericText())
                             }
                             .frame(maxWidth: .infinity)
                         }
                         .padding(.top, 8)
+
+                        // Average steps
+                        Text("Avg: \(vm.monthData.averageSteps.formatted()) steps/day")
+                            .font(IWFont.labelSmall())
+                            .foregroundStyle(Color.iwOutline)
+                            .padding(.top, 4)
                     }
                 }
 
@@ -270,6 +305,7 @@ struct HabitsView: View {
         let label: String
         let color: Color
         let textWhite: Bool
+        let emoji: String?
     }
 
     private static let bronze = Color(hex: 0xCD7F32)
@@ -281,19 +317,42 @@ struct HabitsView: View {
     private func medalForSteps(_ steps: Int) -> MedalInfo {
         switch steps {
         case 20_000...:
-            return MedalInfo(label: "Legend", color: Self.legendary, textWhite: true)
+            return MedalInfo(label: "Legend", color: Self.legendary, textWhite: true, emoji: "👑")
         case 15_000...:
-            return MedalInfo(label: "Beyond", color: Self.diamond, textWhite: true)
+            return MedalInfo(label: "Beyond", color: Self.diamond, textWhite: true, emoji: "💎")
         case 10_000...:
-            return MedalInfo(label: "Gold", color: Self.gold, textWhite: true)
+            return MedalInfo(label: "Gold", color: Self.gold, textWhite: true, emoji: "🥇")
         case 6_500...:
-            return MedalInfo(label: "Silver", color: Self.silver, textWhite: false)
+            return MedalInfo(label: "Silver", color: Self.silver, textWhite: false, emoji: "🥈")
         case 3_000...:
-            return MedalInfo(label: "Bronze", color: Self.bronze, textWhite: true)
+            return MedalInfo(label: "Bronze", color: Self.bronze, textWhite: true, emoji: "🥉")
         case 1...:
-            return MedalInfo(label: "Started", color: Color.iwSurfaceContainerHigh, textWhite: false)
+            return MedalInfo(label: "Started", color: Color.iwSurfaceContainerHigh, textWhite: false, emoji: "👟")
         default:
-            return MedalInfo(label: "Rest Day", color: Color.iwSurfaceContainerLow, textWhite: false)
+            return MedalInfo(label: "Rest Day", color: Color.iwSurfaceContainerLow, textWhite: false, emoji: nil)
         }
+    }
+
+    private struct MedalCounts {
+        var bronze = 0
+        var silver = 0
+        var gold = 0
+        var diamond = 0
+        var legend = 0
+    }
+
+    private func countMedals(_ days: [HabitDay]) -> MedalCounts {
+        var counts = MedalCounts()
+        for day in days {
+            switch day.steps {
+            case 20_000...: counts.legend += 1
+            case 15_000...: counts.diamond += 1
+            case 10_000...: counts.gold += 1
+            case 6_500...: counts.silver += 1
+            case 3_000...: counts.bronze += 1
+            default: break
+            }
+        }
+        return counts
     }
 }
