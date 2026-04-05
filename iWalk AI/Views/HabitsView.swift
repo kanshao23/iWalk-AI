@@ -133,9 +133,10 @@ struct HabitsView: View {
                                                 .stroke(medal.color, lineWidth: 2)
                                                 .frame(width: 38, height: 38)
                                         }
-                                        if !isFuture && medal.emoji != nil {
-                                            Text(medal.emoji!)
-                                                .font(.system(size: 18))
+                                        if !isFuture, let icon = medal.icon {
+                                            Image(systemName: icon)
+                                                .font(.system(size: 16, weight: .semibold))
+                                                .foregroundStyle(medal.color)
                                         } else {
                                             Text("\(day)")
                                                 .font(IWFont.labelMedium())
@@ -143,7 +144,7 @@ struct HabitsView: View {
                                         }
                                     }
                                     // Day number below medal
-                                    if !isFuture && medal.emoji != nil {
+                                    if !isFuture && medal.icon != nil {
                                         Text("\(day)")
                                             .font(.system(size: 9, weight: .medium, design: .rounded))
                                             .foregroundStyle(Color.iwOutline)
@@ -186,51 +187,11 @@ struct HabitsView: View {
                         // Medal stats
                         let medalCounts = countMedals(vm.monthData.days)
                         HStack(spacing: 0) {
-                            VStack(spacing: 2) {
-                                Text("🥉")
-                                    .font(.system(size: 20))
-                                Text("\(medalCounts.bronze)")
-                                    .font(IWFont.titleMedium())
-                                    .foregroundStyle(Self.bronze)
-                                    .contentTransition(.numericText())
-                            }
-                            .frame(maxWidth: .infinity)
-                            VStack(spacing: 2) {
-                                Text("🥈")
-                                    .font(.system(size: 20))
-                                Text("\(medalCounts.silver)")
-                                    .font(IWFont.titleMedium())
-                                    .foregroundStyle(Self.silver)
-                                    .contentTransition(.numericText())
-                            }
-                            .frame(maxWidth: .infinity)
-                            VStack(spacing: 2) {
-                                Text("🥇")
-                                    .font(.system(size: 20))
-                                Text("\(medalCounts.gold)")
-                                    .font(IWFont.titleMedium())
-                                    .foregroundStyle(Self.gold)
-                                    .contentTransition(.numericText())
-                            }
-                            .frame(maxWidth: .infinity)
-                            VStack(spacing: 2) {
-                                Text("💎")
-                                    .font(.system(size: 20))
-                                Text("\(medalCounts.diamond)")
-                                    .font(IWFont.titleMedium())
-                                    .foregroundStyle(Self.diamond)
-                                    .contentTransition(.numericText())
-                            }
-                            .frame(maxWidth: .infinity)
-                            VStack(spacing: 2) {
-                                Text("👑")
-                                    .font(.system(size: 20))
-                                Text("\(medalCounts.legend)")
-                                    .font(IWFont.titleMedium())
-                                    .foregroundStyle(Self.legendary)
-                                    .contentTransition(.numericText())
-                            }
-                            .frame(maxWidth: .infinity)
+                            medalStat(icon: "medal.fill", color: Self.bronze, count: medalCounts.bronze)
+                            medalStat(icon: "medal.fill", color: Self.silver, count: medalCounts.silver)
+                            medalStat(icon: "medal.fill", color: Self.gold, count: medalCounts.gold)
+                            medalStat(icon: "diamond.fill", color: Self.diamond, count: medalCounts.diamond)
+                            medalStat(icon: "crown.fill", color: Self.legendary, count: medalCounts.legend)
                         }
                         .padding(.top, 8)
 
@@ -305,7 +266,7 @@ struct HabitsView: View {
         let label: String
         let color: Color
         let textWhite: Bool
-        let emoji: String?
+        let icon: String? // SF Symbol name
     }
 
     private static let bronze = Color(hex: 0xCD7F32)
@@ -314,22 +275,36 @@ struct HabitsView: View {
     private static let diamond = Color(hex: 0x5B9BD5)
     private static let legendary = Color(hex: 0x9B59B6)
 
+    @ViewBuilder
+    private func medalStat(icon: String, color: Color, count: Int) -> some View {
+        VStack(spacing: 2) {
+            Image(systemName: icon)
+                .font(.system(size: 18))
+                .foregroundStyle(color)
+            Text("\(count)")
+                .font(IWFont.titleMedium())
+                .foregroundStyle(color)
+                .contentTransition(.numericText())
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     private func medalForSteps(_ steps: Int) -> MedalInfo {
         switch steps {
         case 20_000...:
-            return MedalInfo(label: "Legend", color: Self.legendary, textWhite: true, emoji: "👑")
+            return MedalInfo(label: "Legend", color: Self.legendary, textWhite: true, icon: "crown.fill")
         case 15_000...:
-            return MedalInfo(label: "Beyond", color: Self.diamond, textWhite: true, emoji: "💎")
+            return MedalInfo(label: "Beyond", color: Self.diamond, textWhite: true, icon: "diamond.fill")
         case 10_000...:
-            return MedalInfo(label: "Gold", color: Self.gold, textWhite: true, emoji: "🥇")
+            return MedalInfo(label: "Gold", color: Self.gold, textWhite: true, icon: "medal.fill")
         case 6_500...:
-            return MedalInfo(label: "Silver", color: Self.silver, textWhite: false, emoji: "🥈")
+            return MedalInfo(label: "Silver", color: Self.silver, textWhite: false, icon: "medal.fill")
         case 3_000...:
-            return MedalInfo(label: "Bronze", color: Self.bronze, textWhite: true, emoji: "🥉")
+            return MedalInfo(label: "Bronze", color: Self.bronze, textWhite: true, icon: "medal.fill")
         case 1...:
-            return MedalInfo(label: "Started", color: Color.iwSurfaceContainerHigh, textWhite: false, emoji: "👟")
+            return MedalInfo(label: "Started", color: Color.iwSurfaceContainerHigh, textWhite: false, icon: "shoeprints.fill")
         default:
-            return MedalInfo(label: "Rest Day", color: Color.iwSurfaceContainerLow, textWhite: false, emoji: nil)
+            return MedalInfo(label: "Rest Day", color: Color.iwSurfaceContainerLow, textWhite: false, icon: nil)
         }
     }
 
