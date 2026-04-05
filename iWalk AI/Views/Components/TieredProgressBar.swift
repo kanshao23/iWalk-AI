@@ -74,7 +74,7 @@ struct TieredProgressBar: View {
     private var finalGoal: Int { goalSteps }
 
     // Medal & achievement colors
-    private static let bronze = Color(hex: 0xCD7F32)
+    private static let bronze = Color(hex: 0xA0522D)
     private static let silver = Color(hex: 0xA8A9AD)
     private static let gold = Color(hex: 0xB8860B)
     private static let diamond = Color(hex: 0x5B9BD5)
