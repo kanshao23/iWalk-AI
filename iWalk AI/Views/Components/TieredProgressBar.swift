@@ -9,9 +9,13 @@ struct TieredProgressBar: View {
 
     private var scrollableMax: Int { 20_000 }
 
-    // Screen shows 0..goalSteps, scrollable to 20k
+    // Screen shows 0..goalSteps+15% padding, scrollable to 20k
+    private var visibleSteps: Int {
+        Int(Double(goalSteps) * 1.15) // 15% extra so Goal ghost isn't clipped
+    }
+
     private func scrollScale(screenWidth: CGFloat) -> CGFloat {
-        screenWidth * CGFloat(Double(scrollableMax) / Double(goalSteps))
+        screenWidth * CGFloat(Double(scrollableMax) / Double(visibleSteps))
     }
 
     private func xPosition(for steps: Int, in contentWidth: CGFloat) -> CGFloat {
@@ -166,11 +170,13 @@ struct TieredProgressBar: View {
                                 }
                             }
                         }
-                        .frame(width: contentWidth, height: 50)
+                        .frame(width: contentWidth, height: 55)
+                    .padding(.bottom, 4)
                     }
+                    .padding(.leading, 10) // prevent left-side clipping
                 }
             }
-            .frame(height: 270)
+            .frame(height: 280)
 
             // AI insight card
             HStack(spacing: 6) {
