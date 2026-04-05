@@ -218,7 +218,10 @@ private struct ActiveWalkContent: View {
                     HStack(spacing: 12) {
                         CompactStatPill(icon: "speedometer", value: vm.paceFormatted, label: "min/km", iconColor: .iwSecondary)
                         CompactStatPill(icon: "flame.fill", value: "\(vm.sessionCalories)", label: "kcal", iconColor: .iwTertiaryContainer)
-                        CompactStatPill(icon: "heart.fill", value: "\(vm.currentHeartRate)", label: vm.heartRateZone, iconColor: vm.heartRateZoneColor)
+                        // Heart rate only shown if real data available (Apple Watch)
+                        if vm.hasRealHeartRate {
+                            CompactStatPill(icon: "heart.fill", value: "\(vm.currentHeartRate)", label: vm.heartRateZone, iconColor: vm.heartRateZoneColor)
+                        }
                     }
                     .padding(.horizontal, 16)
 
@@ -379,7 +382,9 @@ private struct WalkSummaryContent: View {
                     SummaryRow(icon: "mappin.and.ellipse", label: "Distance", value: String(format: "%.2f km", session.distanceKm), color: .iwPrimaryContainer)
                     SummaryRow(icon: "flame.fill", label: "Calories", value: "\(session.calories) kcal", color: .iwTertiaryContainer)
                     SummaryRow(icon: "speedometer", label: "Avg Pace", value: "\(session.paceFormatted) min/km", color: .iwSecondaryFixedDim)
-                    SummaryRow(icon: "heart.fill", label: "Avg Heart Rate", value: "\(session.averageHeartRate) bpm", color: .iwError)
+                    if session.averageHeartRate > 0 {
+                        SummaryRow(icon: "heart.fill", label: "Avg Heart Rate", value: "\(session.averageHeartRate) bpm", color: .iwError)
+                    }
                 }
                 .padding(20)
                 .background(.ultraThinMaterial)

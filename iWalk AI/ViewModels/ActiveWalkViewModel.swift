@@ -11,7 +11,8 @@ final class ActiveWalkViewModel {
     var sessionSteps: Int = 0
     var sessionCalories: Int = 0
     var sessionDistanceKm: Double = 0.0
-    var currentHeartRate: Int = 85
+    var currentHeartRate: Int = 0
+    var hasRealHeartRate: Bool = false
 
     // Milestone toast
     var showMilestoneToast = false
@@ -119,7 +120,7 @@ final class ActiveWalkViewModel {
 
     private func beginWalking() {
         startElapsedTimer()
-        startHeartRateSimulation()
+        startHeartRatePolling()
 
         // Try real pedometer first
         if CMPedometer.isStepCountingAvailable() {
@@ -164,14 +165,27 @@ final class ActiveWalkViewModel {
         }
     }
 
-    private func startHeartRateSimulation() {
-        // Heart rate simulation (real HR requires Apple Watch + HealthKit)
-        heartRateTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
+    private func startHeartRatePolling() {
+        // Poll HealthKit for latest heart rate (requires Apple Watch)
+        heartRateTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] timer in
             guard let self else { timer.invalidate(); return }
-            let target = self.isActive ? 120 : 95
-            let drift = Int.random(in: -4...4)
-            let newHR = self.currentHeartRate + (target > self.currentHeartRate ? Int.random(in: 1...3) : Int.random(in: -2...1)) + drift
-            self.currentHeartRate = max(70, min(160, newHR))
+            Task {
+                if let hr = await HealthKitManager.shared.fetchLatestHeartRate() {
+                    await MainActor.run {
+                        self.currentHeartRate = hr
+                        self.hasRealHeartRate = true
+                    }
+                }
+            }
+        }
+        // Initial fetch
+        Task {
+            if let hr = await HealthKitManager.shared.fetchLatestHeartRate() {
+                await MainActor.run {
+                    currentHeartRate = hr
+                    hasRealHeartRate = true
+                }
+            }
         }
     }
 
