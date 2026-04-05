@@ -124,21 +124,39 @@ private struct ActiveWalkContent: View {
                                 .font(.system(size: 24, weight: .bold, design: .rounded))
                                 .foregroundStyle(Color.iwPrimaryFixed)
                                 .contentTransition(.numericText())
-                            Text("steps")
+                            Text("\(vm.totalSteps.formatted()) total")
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundStyle(.white.opacity(0.6))
                         }
                         .frame(maxWidth: .infinity)
 
-                        // Compact progress ring
-                        StepProgressRing(
-                            currentSteps: vm.totalSteps,
-                            goalSteps: vm.dailyGoal,
-                            lineWidth: 8,
-                            animatedProgress: vm.goalProgress,
-                            onDarkBackground: true
-                        )
-                        .frame(width: 100, height: 100)
+                        // Compact progress ring — percentage only
+                        ZStack {
+                            Circle()
+                                .stroke(.white.opacity(0.15), lineWidth: 8)
+                            Circle()
+                                .trim(from: 0, to: vm.goalProgress)
+                                .stroke(
+                                    AngularGradient(
+                                        colors: [.iwPrimary, .iwPrimaryContainer, .iwPrimaryFixed],
+                                        center: .center,
+                                        startAngle: .degrees(0),
+                                        endAngle: .degrees(360 * max(vm.goalProgress, 0.01))
+                                    ),
+                                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                                )
+                                .rotationEffect(.degrees(-90))
+                            VStack(spacing: 0) {
+                                Text("\(Int(vm.goalProgress * 100))%")
+                                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.white)
+                                    .contentTransition(.numericText())
+                                Text("Goal")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.6))
+                            }
+                        }
+                        .frame(width: 90, height: 90)
 
                         // Distance
                         VStack(spacing: 2) {
