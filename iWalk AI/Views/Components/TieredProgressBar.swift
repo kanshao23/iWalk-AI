@@ -23,28 +23,33 @@ struct TieredProgressBar: View {
     }
 
     var body: some View {
-        VStack(spacing: 14) {
-            HStack {
-                Text(currentSteps.formatted())
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.iwPrimary)
-                    .contentTransition(.numericText())
-                Text("/ \(goalSteps.formatted()) steps")
-                    .font(IWFont.bodyMedium())
-                    .foregroundStyle(Color.iwOutline)
-                Spacer()
-            }
-
+        VStack(spacing: 0) {
             GeometryReader { geo in
                 let trackWidth = geo.size.width
-                let trackY: CGFloat = 20
+                let trackY: CGFloat = 90
+                let walkerX = trackWidth * walkerPosition
 
                 ZStack(alignment: .leading) {
+                    // Step count above walker
+                    Text(currentSteps.formatted())
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.iwPrimary)
+                        .contentTransition(.numericText())
+                        .position(x: walkerX, y: trackY - 80)
+
+                    // Walker icon
+                    Image(systemName: "figure.walk")
+                        .font(.system(size: 48, weight: .medium))
+                        .foregroundStyle(Color.iwPrimary)
+                        .position(x: walkerX, y: trackY - 36)
+
+                    // Background track
                     RoundedRectangle(cornerRadius: 4)
                         .fill(Color.iwSurfaceContainerHigh)
                         .frame(height: 8)
                         .position(x: trackWidth / 2, y: trackY)
 
+                    // Filled track
                     if walkerPosition > 0.005 {
                         RoundedRectangle(cornerRadius: 4)
                             .fill(Color.iwPrimaryGradient)
@@ -52,6 +57,7 @@ struct TieredProgressBar: View {
                             .position(x: (trackWidth * walkerPosition) / 2, y: trackY)
                     }
 
+                    // Tier markers
                     ForEach(tiers) { tier in
                         let x = trackWidth * tierPosition(tier)
 
@@ -65,11 +71,13 @@ struct TieredProgressBar: View {
                             .scaleEffect(tier.isReached ? 1.0 : 0.85)
                             .position(x: x, y: trackY)
 
+                        // Tier label below
                         Text(tierLabel(tier.stepsRequired))
                             .font(.system(size: 9, weight: .medium, design: .rounded))
                             .foregroundStyle(tier.isReached ? Color.iwPrimary : Color.iwOutlineVariant)
                             .position(x: x, y: trackY + 18)
 
+                        // Coin reward above (only for reached tiers)
                         if tier.isReached {
                             Text("+\(tier.coinReward)")
                                 .font(.system(size: 9, weight: .bold, design: .rounded))
@@ -78,6 +86,7 @@ struct TieredProgressBar: View {
                         }
                     }
 
+                    // Personal goal star
                     if let pgPos = personalGoalPosition {
                         let pgX = trackWidth * pgPos
                         Image(systemName: "star.fill")
@@ -85,9 +94,20 @@ struct TieredProgressBar: View {
                             .foregroundStyle(personalGoal?.isReached == true ? Color.iwPrimary : Color.iwTertiary)
                             .position(x: pgX, y: trackY - 16)
                     }
+
+                    // Goal flag at end
+                    VStack(spacing: 0) {
+                        Image(systemName: "flag.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(walkerPosition >= 1.0 ? Color.iwPrimary : Color.iwOutlineVariant)
+                        Text(goalSteps.formatted())
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.iwOutline)
+                    }
+                    .position(x: trackWidth - 10, y: trackY - 20)
                 }
             }
-            .frame(height: 50)
+            .frame(height: 130)
         }
         .padding(.vertical, 8)
         .accessibilityElement(children: .ignore)
