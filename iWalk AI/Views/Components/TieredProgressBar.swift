@@ -7,11 +7,16 @@ struct TieredProgressBar: View {
     let personalGoal: PersonalGoal?
     var animatedProgress: Double?
 
-    private var scrollableMax: Int { 20_000 }
+    // Dynamic max: extends beyond 20k if user exceeds it, or if hidden achievements exist
+    private var scrollableMax: Int {
+        let hiddenMax = 50_000
+        let stepsMax = max(currentSteps + 5_000, 20_000) // always show at least 5k ahead
+        return min(max(stepsMax, hiddenMax), hiddenMax)
+    }
 
-    // Screen shows 0..goalSteps+15% padding, scrollable to 20k
+    // Screen shows 0..goalSteps+15% padding, scrollable to max
     private var visibleSteps: Int {
-        Int(Double(goalSteps) * 1.15) // 15% extra so Goal ghost isn't clipped
+        Int(Double(goalSteps) * 1.15)
     }
 
     private func scrollScale(screenWidth: CGFloat) -> CGFloat {
@@ -71,12 +76,15 @@ struct TieredProgressBar: View {
     // Medal & achievement colors
     private static let bronze = Color(hex: 0xCD7F32)
     private static let silver = Color(hex: 0xA8A9AD)
-    private static let gold = Color(hex: 0xB8860B)     // DarkGoldenrod — rich & vivid
-    private static let diamond = Color(hex: 0x5B9BD5)  // Diamond blue
-    private static let legendary = Color(hex: 0x9B59B6) // Royal purple
+    private static let gold = Color(hex: 0xB8860B)
+    private static let diamond = Color(hex: 0x5B9BD5)
+    private static let legendary = Color(hex: 0x9B59B6)
+    private static let insane = Color(hex: 0xE74C3C)    // Red
+    private static let superhuman = Color(hex: 0xE67E22) // Orange
+    private static let mythic = Color(hex: 0x1ABC9C)     // Teal
 
     private var ghostTargets: [GhostTarget] {
-        [
+        var targets = [
             GhostTarget(id: "min", steps: 3_000, label: "Bronze",
                         color: Self.bronze, reached: currentSteps >= 3_000),
             GhostTarget(id: "good", steps: 6_500, label: "Silver",
@@ -88,6 +96,18 @@ struct TieredProgressBar: View {
             GhostTarget(id: "legend", steps: 20_000, label: "Legend",
                         color: Self.legendary, reached: currentSteps >= 20_000),
         ]
+
+        // Hidden achievements — only revealed after reaching Legend (20k)
+        if currentSteps >= 20_000 {
+            targets.append(GhostTarget(id: "insane", steps: 25_000, label: "Insane",
+                        color: Self.insane, reached: currentSteps >= 25_000))
+            targets.append(GhostTarget(id: "superhuman", steps: 30_000, label: "Superhuman",
+                        color: Self.superhuman, reached: currentSteps >= 30_000))
+            targets.append(GhostTarget(id: "mythic", steps: 50_000, label: "Mythic",
+                        color: Self.mythic, reached: currentSteps >= 50_000))
+        }
+
+        return targets
     }
 
     // MARK: - Body
@@ -193,7 +213,7 @@ struct TieredProgressBar: View {
                         .frame(width: contentWidth, height: 55)
                     .padding(.bottom, 4)
                     }
-                    .padding(.leading, 10) // prevent left-side clipping
+                    .padding(.horizontal, 20) // prevent clipping on both edges
                 }
             }
             .frame(height: 280)
