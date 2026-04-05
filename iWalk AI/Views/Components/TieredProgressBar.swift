@@ -63,21 +63,37 @@ struct TieredProgressBar: View {
         }
     }
 
-    // Three ghost milestones
-    private var ghostTargets: [(steps: Int, label: String, color: Color)] {
-        let minimumSteps = 1_500 // streak minimum
-        let myGoalSteps = personalGoal?.targetSteps ?? 0
-        var targets: [(steps: Int, label: String, color: Color)] = []
+    // Three ghost milestones — always shown, with reached state
+    private struct GhostTarget: Identifiable {
+        let id: String
+        let steps: Int
+        let label: String
+        let color: Color
+        let reached: Bool
+    }
 
-        if currentSteps < minimumSteps {
-            targets.append((minimumSteps, "Min", .iwTertiary))
+    private var ghostTargets: [GhostTarget] {
+        let minimumSteps = 1_500
+        let myGoalSteps = personalGoal?.targetSteps ?? 0
+        var targets: [GhostTarget] = []
+
+        targets.append(GhostTarget(
+            id: "min", steps: minimumSteps, label: "Min",
+            color: .iwTertiary, reached: currentSteps >= minimumSteps
+        ))
+
+        if myGoalSteps > 0 && myGoalSteps != goalSteps {
+            targets.append(GhostTarget(
+                id: "my", steps: myGoalSteps, label: "My Goal",
+                color: .iwSecondary, reached: currentSteps >= myGoalSteps
+            ))
         }
-        if myGoalSteps > 0 && currentSteps < myGoalSteps && myGoalSteps != goalSteps {
-            targets.append((myGoalSteps, "My Goal", .iwSecondary))
-        }
-        if currentSteps < goalSteps {
-            targets.append((goalSteps, "Goal", .iwPrimary))
-        }
+
+        targets.append(GhostTarget(
+            id: "goal", steps: goalSteps, label: "Goal",
+            color: .iwPrimary, reached: currentSteps >= goalSteps
+        ))
+
         return targets
     }
 
@@ -90,35 +106,51 @@ struct TieredProgressBar: View {
                 let walkerX = max(screenWidth * walkerVisibleFrac, 40)
 
                 ZStack {
-                    // Ghost walkers at each target position
-                    ForEach(Array(ghostTargets.enumerated()), id: \.offset) { _, target in
+                    // Ghost walkers — always visible
+                    ForEach(ghostTargets) { target in
                         let frac = min(Double(target.steps) / Double(visibleMax), 0.95)
                         let ghostX = max(screenWidth * frac, 60)
 
-                        // Ghost figure
-                        Image(systemName: "figure.walk")
-                            .font(.system(size: 80, weight: .medium))
-                            .foregroundStyle(target.color.opacity(0.15))
-                            .overlay(
+                        ZStack {
+                            if target.reached {
+                                // Reached: solid color with checkmark
                                 Image(systemName: "figure.walk")
-                                    .font(.system(size: 80, weight: .medium))
+                                    .font(.system(size: 60, weight: .medium))
                                     .foregroundStyle(target.color.opacity(0.3))
-                                    .mask(
-                                        StripedMask()
-                                            .frame(width: 52, height: 100)
-                                    )
-                            )
-                            .position(x: ghostX, y: 96)
 
-                        // Label + step count below ghost
+                                // Checkmark badge
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(target.color)
+                                    .background(Circle().fill(Color.iwSurface).frame(width: 18, height: 18))
+                                    .offset(x: 20, y: -25)
+                            } else {
+                                // Not reached: striped ghost
+                                Image(systemName: "figure.walk")
+                                    .font(.system(size: 60, weight: .medium))
+                                    .foregroundStyle(target.color.opacity(0.1))
+                                    .overlay(
+                                        Image(systemName: "figure.walk")
+                                            .font(.system(size: 60, weight: .medium))
+                                            .foregroundStyle(target.color.opacity(0.25))
+                                            .mask(
+                                                StripedMask()
+                                                    .frame(width: 40, height: 80)
+                                            )
+                                    )
+                            }
+                        }
+                        .position(x: ghostX, y: 96)
+
+                        // Label below ghost
                         VStack(spacing: 1) {
                             Text(target.label)
                                 .font(.system(size: 10, weight: .semibold, design: .rounded))
                             Text(target.steps.formatted())
                                 .font(.system(size: 11, weight: .medium, design: .rounded))
                         }
-                        .foregroundStyle(target.color.opacity(0.6))
-                        .position(x: ghostX, y: 155)
+                        .foregroundStyle(target.reached ? target.color : target.color.opacity(0.5))
+                        .position(x: ghostX, y: 148)
                     }
 
                     // Active walker (larger, solid)
