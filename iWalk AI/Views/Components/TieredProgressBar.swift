@@ -60,16 +60,16 @@ struct TieredProgressBar: View {
                         .position(x: walkerX, y: trackY - 110)
 
                     // Background track
-                    RoundedRectangle(cornerRadius: 4)
+                    RoundedRectangle(cornerRadius: 6)
                         .fill(Color.iwSurfaceContainerHigh)
-                        .frame(height: 8)
+                        .frame(height: 14)
                         .position(x: trackWidth / 2, y: trackY)
 
                     // Filled track
                     if walkerPosition > 0.005 {
-                        RoundedRectangle(cornerRadius: 4)
+                        RoundedRectangle(cornerRadius: 6)
                             .fill(Color.iwPrimaryGradient)
-                            .frame(width: trackWidth * walkerPosition, height: 8)
+                            .frame(width: trackWidth * walkerPosition, height: 14)
                             .position(x: (trackWidth * walkerPosition) / 2, y: trackY)
                     }
 
@@ -79,26 +79,26 @@ struct TieredProgressBar: View {
 
                         Circle()
                             .fill(tier.isReached ? Color.iwPrimary : Color.iwSurfaceContainerHighest)
-                            .frame(width: 14, height: 14)
+                            .frame(width: 20, height: 20)
                             .overlay(
                                 Circle()
-                                    .stroke(Color.iwSurfaceContainerLowest, lineWidth: 2)
+                                    .stroke(Color.iwSurfaceContainerLowest, lineWidth: 2.5)
                             )
                             .scaleEffect(tier.isReached ? 1.0 : 0.85)
                             .position(x: x, y: trackY)
 
                         // Tier label below
                         Text(tierLabel(tier.stepsRequired))
-                            .font(.system(size: 9, weight: .medium, design: .rounded))
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
                             .foregroundStyle(tier.isReached ? Color.iwPrimary : Color.iwOutlineVariant)
-                            .position(x: x, y: trackY + 18)
+                            .position(x: x, y: trackY + 22)
 
                         // Coin reward above (only for reached tiers)
                         if tier.isReached {
                             Text("+\(tier.coinReward)")
-                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
                                 .foregroundStyle(Color.iwTertiaryContainer)
-                                .position(x: x, y: trackY - 16)
+                                .position(x: x, y: trackY - 20)
                         }
                     }
 
@@ -106,21 +106,21 @@ struct TieredProgressBar: View {
                     if let pgPos = personalGoalPosition {
                         let pgX = trackWidth * pgPos
                         Image(systemName: "star.fill")
-                            .font(.system(size: 12))
+                            .font(.system(size: 16))
                             .foregroundStyle(personalGoal?.isReached == true ? Color.iwPrimary : Color.iwTertiary)
-                            .position(x: pgX, y: trackY - 16)
+                            .position(x: pgX, y: trackY - 22)
                     }
 
-                    // Goal flag at the goalSteps position (not at visual max end)
+                    // Goal flag at the goalSteps position
                     VStack(spacing: 0) {
                         Image(systemName: "flag.fill")
-                            .font(.system(size: 14))
+                            .font(.system(size: 18))
                             .foregroundStyle(currentSteps >= goalSteps ? Color.iwPrimary : Color.iwOutlineVariant)
                         Text(goalSteps.formatted())
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.iwOutline)
                     }
-                    .position(x: goalFlagX, y: trackY - 24)
+                    .position(x: goalFlagX, y: trackY - 28)
                 }
             }
             .frame(height: 260)
