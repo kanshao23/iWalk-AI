@@ -194,28 +194,6 @@ struct TieredProgressBar: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .padding(.top, 8)
 
-            // Goals legend
-            HStack(spacing: 14) {
-                HStack(spacing: 3) {
-                    Circle().fill(Color.iwTertiary).frame(width: 8, height: 8)
-                    Text("Min: 3k")
-                        .font(IWFont.labelSmall())
-                        .foregroundStyle(Color.iwTertiary)
-                }
-                HStack(spacing: 3) {
-                    Circle().fill(Color.iwSecondary).frame(width: 8, height: 8)
-                    Text("Good: 6.5k")
-                        .font(IWFont.labelSmall())
-                        .foregroundStyle(Color.iwSecondary)
-                }
-                HStack(spacing: 3) {
-                    Circle().fill(Color.iwPrimary).frame(width: 8, height: 8)
-                    Text("Goal: \(finalGoal.formatted())")
-                        .font(IWFont.labelSmall())
-                        .foregroundStyle(Color.iwPrimary)
-                }
-            }
-            .padding(.top, 6)
         }
         .padding(.vertical, 8)
         .accessibilityElement(children: .ignore)
