@@ -102,17 +102,8 @@ struct TieredProgressBar: View {
                         }
                     }
 
-                    // Personal goal star — positioned above the track at goal position
-                    if let pgPos = personalGoalPosition {
-                        let pgX = trackWidth * pgPos
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 16))
-                            .foregroundStyle(personalGoal?.isReached == true ? Color.iwPrimary : Color.iwTertiary)
-                            .position(x: pgX, y: trackY - 22)
-                    }
-
-                    // Goal flag at the goalSteps position
-                    VStack(spacing: 0) {
+                    // Goal flag — above the track, high up
+                    VStack(spacing: 2) {
                         Image(systemName: "flag.fill")
                             .font(.system(size: 18))
                             .foregroundStyle(currentSteps >= goalSteps ? Color.iwPrimary : Color.iwOutlineVariant)
@@ -120,7 +111,20 @@ struct TieredProgressBar: View {
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.iwOutline)
                     }
-                    .position(x: goalFlagX, y: trackY - 28)
+                    .position(x: goalFlagX, y: trackY - 36)
+
+                    // Personal goal star — below the track to avoid overlapping with flag
+                    if let pgPos = personalGoalPosition {
+                        let pgX = trackWidth * pgPos
+                        HStack(spacing: 2) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 14))
+                            Text("Goal")
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                        }
+                        .foregroundStyle(personalGoal?.isReached == true ? Color.iwPrimary : Color.iwTertiary)
+                        .position(x: pgX, y: trackY + 22)
+                    }
                 }
             }
             .frame(height: 260)
