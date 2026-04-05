@@ -102,7 +102,7 @@ struct TieredProgressBar: View {
                         }
                     }
 
-                    // Goal flag — above the track, high up
+                    // Goal flag — well above the coin reward labels
                     VStack(spacing: 2) {
                         Image(systemName: "flag.fill")
                             .font(.system(size: 18))
@@ -111,7 +111,7 @@ struct TieredProgressBar: View {
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.iwOutline)
                     }
-                    .position(x: goalFlagX, y: trackY - 36)
+                    .position(x: goalFlagX, y: trackY - 52)
 
                     // Personal goal star — below the track to avoid overlapping with flag
                     if let pgPos = personalGoalPosition {
