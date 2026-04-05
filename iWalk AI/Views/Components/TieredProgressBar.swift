@@ -158,11 +158,11 @@ struct TieredProgressBar: View {
                                 let isGoalTier = tier.stepsRequired == goalSteps
 
                                 if isGoalTier {
-                                    // Star shape for the goal tier
+                                    // Star shape for the goal tier — gold colored, larger
                                     Image(systemName: tier.isReached ? "star.fill" : "star")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundStyle(tier.isReached ? Color.iwPrimary : Color.iwOutlineVariant)
-                                        .offset(x: x - 10)
+                                        .font(.system(size: 26, weight: .semibold))
+                                        .foregroundStyle(tier.isReached ? Self.gold : Self.gold.opacity(0.4))
+                                        .offset(x: x - 13)
                                 } else {
                                     Circle()
                                         .fill(tier.isReached ? Color.iwPrimary : Color.iwSurfaceContainerHighest)

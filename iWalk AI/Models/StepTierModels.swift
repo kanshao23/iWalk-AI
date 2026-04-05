@@ -12,7 +12,8 @@ struct StepTier: Identifiable, Codable {
         StepTier(id: 2, stepsRequired: 3_000, coinReward: 8, isReached: false, isClaimed: false),
         StepTier(id: 3, stepsRequired: 6_500, coinReward: 12, isReached: false, isClaimed: false),
         StepTier(id: 4, stepsRequired: 10_000, coinReward: 18, isReached: false, isClaimed: false),
-        StepTier(id: 5, stepsRequired: 20_000, coinReward: 25, isReached: false, isClaimed: false),
+        StepTier(id: 5, stepsRequired: 15_000, coinReward: 22, isReached: false, isClaimed: false),
+        StepTier(id: 6, stepsRequired: 20_000, coinReward: 25, isReached: false, isClaimed: false),
     ]
 }
 
