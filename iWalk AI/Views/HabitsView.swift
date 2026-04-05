@@ -187,11 +187,11 @@ struct HabitsView: View {
                         // Medal stats
                         let medalCounts = countMedals(vm.monthData.days)
                         HStack(spacing: 0) {
-                            medalStat(icon: "medal.fill", color: Self.bronze, count: medalCounts.bronze)
-                            medalStat(icon: "medal.fill", color: Self.silver, count: medalCounts.silver)
-                            medalStat(icon: "medal.fill", color: Self.gold, count: medalCounts.gold)
-                            medalStat(icon: "diamond.fill", color: Self.diamond, count: medalCounts.diamond)
-                            medalStat(icon: "crown.fill", color: Self.legendary, count: medalCounts.legend)
+                            medalStat(icon: "medal.fill", color: Self.bronze, count: medalCounts.bronze, name: "Bronze")
+                            medalStat(icon: "medal.fill", color: Self.silver, count: medalCounts.silver, name: "Silver")
+                            medalStat(icon: "medal.fill", color: Self.gold, count: medalCounts.gold, name: "Gold")
+                            medalStat(icon: "diamond.fill", color: Self.diamond, count: medalCounts.diamond, name: "Beyond")
+                            medalStat(icon: "crown.fill", color: Self.legendary, count: medalCounts.legend, name: "Legend")
                         }
                         .padding(.top, 8)
 
@@ -276,7 +276,7 @@ struct HabitsView: View {
     private static let legendary = Color(hex: 0x9B59B6)
 
     @ViewBuilder
-    private func medalStat(icon: String, color: Color, count: Int) -> some View {
+    private func medalStat(icon: String, color: Color, count: Int, name: String) -> some View {
         VStack(spacing: 2) {
             Image(systemName: icon)
                 .font(.system(size: 18))
@@ -285,6 +285,9 @@ struct HabitsView: View {
                 .font(IWFont.titleMedium())
                 .foregroundStyle(color)
                 .contentTransition(.numericText())
+            Text(name)
+                .font(.system(size: 9, weight: .medium, design: .rounded))
+                .foregroundStyle(color.opacity(0.7))
         }
         .frame(maxWidth: .infinity)
     }
