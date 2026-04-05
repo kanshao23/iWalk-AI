@@ -22,6 +22,21 @@ struct TieredProgressBar: View {
         min(Double(currentSteps) / Double(visualMax), 1.0)
     }
 
+    /// Expected progress based on time of day (7:00–23:00 waking hours)
+    private var expectedProgress: Double {
+        let cal = Calendar.current
+        let hour = cal.component(.hour, from: .now)
+        let minute = cal.component(.minute, from: .now)
+        let minutesSince7am = (hour - 7) * 60 + minute
+        let wakingMinutes = 16 * 60
+        return min(max(Double(minutesSince7am) / Double(wakingMinutes), 0), 1.0)
+    }
+
+    private var isAheadOfSchedule: Bool {
+        let goalProgress = min(Double(currentSteps) / Double(goalSteps), 1.0)
+        return goalProgress >= expectedProgress
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             GeometryReader { geo in
@@ -109,6 +124,16 @@ struct TieredProgressBar: View {
                 }
             }
             .frame(height: 260)
+
+            // Encouragement label
+            HStack(spacing: 4) {
+                Image(systemName: isAheadOfSchedule ? "checkmark.circle.fill" : "clock.badge.exclamationmark")
+                    .font(.system(size: 12))
+                Text(isAheadOfSchedule ? "Ahead of schedule!" : "A bit behind — let's walk!")
+                    .font(IWFont.labelSmall())
+            }
+            .foregroundStyle(isAheadOfSchedule ? Color.iwPrimary : Color.iwTertiary)
+            .padding(.top, 4)
         }
         .padding(.vertical, 8)
         .accessibilityElement(children: .ignore)
