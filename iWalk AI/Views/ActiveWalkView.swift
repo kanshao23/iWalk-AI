@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 // MARK: - Container
 
@@ -66,163 +67,173 @@ private struct ActiveWalkContent: View {
     @Bindable var vm: ActiveWalkViewModel
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Elapsed Time — top
+        ZStack(alignment: .top) {
+            // Full-screen map
+            Map(interactionModes: []) {
+                UserAnnotation()
+            }
+            .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
+            .mapControlVisibility(.hidden)
+            .ignoresSafeArea()
+
+            // Top overlay — elapsed time badge
             VStack(spacing: 4) {
-                Text("ELAPSED")
-                    .font(IWFont.labelMedium())
-                    .foregroundStyle(.white.opacity(0.6))
-                    .tracking(2)
-                Text(vm.elapsedFormatted)
-                    .font(.system(size: 52, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .contentTransition(.numericText())
-                    .monospacedDigit()
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(Color.iwPrimary)
+                        .frame(width: 10, height: 10)
+                    Text(vm.elapsedFormatted)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .contentTransition(.numericText())
+                        .monospacedDigit()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(.ultraThinMaterial)
+                .clipShape(Capsule())
+
                 if !vm.usesRealPedometer {
                     Text("SIMULATED")
-                        .font(IWFont.labelSmall())
-                        .foregroundStyle(.white.opacity(0.4))
-                        .padding(.top, 2)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(.black.opacity(0.3))
+                        .clipShape(Capsule())
                 }
             }
             .padding(.top, 60)
 
-            Spacer()
+            // Bottom stats panel
+            VStack(spacing: 0) {
+                Spacer()
 
-            // Progress Ring — center
-            ZStack {
-                StepProgressRing(
-                    currentSteps: vm.totalSteps,
-                    goalSteps: vm.dailyGoal,
-                    lineWidth: 14,
-                    animatedProgress: vm.goalProgress,
-                    onDarkBackground: true
+                VStack(spacing: 16) {
+                    // Drag handle
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(.white.opacity(0.3))
+                        .frame(width: 36, height: 4)
+                        .padding(.top, 10)
+
+                    // Main stats row: steps + ring + distance
+                    HStack(spacing: 0) {
+                        // Session steps
+                        VStack(spacing: 2) {
+                            Text("+\(vm.sessionSteps.formatted())")
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color.iwPrimaryFixed)
+                                .contentTransition(.numericText())
+                            Text("steps")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                        .frame(maxWidth: .infinity)
+
+                        // Compact progress ring
+                        StepProgressRing(
+                            currentSteps: vm.totalSteps,
+                            goalSteps: vm.dailyGoal,
+                            lineWidth: 8,
+                            animatedProgress: vm.goalProgress,
+                            onDarkBackground: true
+                        )
+                        .frame(width: 100, height: 100)
+
+                        // Distance
+                        VStack(spacing: 2) {
+                            Text(String(format: "%.2f", vm.sessionDistanceKm))
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .contentTransition(.numericText())
+                            Text("km")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+
+                    // Secondary stats row
+                    HStack(spacing: 12) {
+                        CompactStatPill(icon: "speedometer", value: vm.paceFormatted, label: "min/km", iconColor: .iwSecondary)
+                        CompactStatPill(icon: "flame.fill", value: "\(vm.sessionCalories)", label: "kcal", iconColor: .iwTertiaryContainer)
+                        CompactStatPill(icon: "heart.fill", value: "\(vm.currentHeartRate)", label: vm.heartRateZone, iconColor: vm.heartRateZoneColor)
+                    }
+                    .padding(.horizontal, 16)
+
+                    // Bottom Buttons
+                    HStack(spacing: 16) {
+                        Button {
+                            if vm.isPaused { vm.resume() } else { vm.pause() }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: vm.isPaused ? "play.fill" : "pause.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text(vm.isPaused ? "Resume" : "Pause")
+                                    .font(.system(size: 15, weight: .semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(.white.opacity(0.15))
+                            .clipShape(Capsule())
+                        }
+
+                        Button {
+                            vm.endWalk()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "stop.fill")
+                                    .font(.system(size: 14, weight: .semibold))
+                                Text("End Walk")
+                                    .font(.system(size: 15, weight: .semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.iwError)
+                            .clipShape(Capsule())
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 30)
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 28)
+                        .fill(Color(hex: 0x1A1A2E).opacity(0.95))
+                        .ignoresSafeArea(edges: .bottom)
                 )
-                .frame(width: 220, height: 220)
             }
-
-            // Session steps
-            VStack(spacing: 4) {
-                Text("+\(vm.sessionSteps.formatted())")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.iwPrimaryFixed)
-                    .contentTransition(.numericText())
-                Text("steps this walk")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.7))
-            }
-            .padding(.top, 12)
-
-            Spacer()
-
-            // Stats Grid — 2x2
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                WalkStatCell(icon: "speedometer", value: vm.paceFormatted, label: "min/km", iconColor: .iwSecondary)
-                WalkStatCell(icon: "mappin.and.ellipse", value: String(format: "%.2f", vm.sessionDistanceKm), label: "km", iconColor: .iwPrimaryContainer)
-                WalkStatCell(icon: "flame.fill", value: "\(vm.sessionCalories)", label: "kcal", iconColor: .iwTertiaryContainer)
-                HeartRateStatCell(bpm: vm.currentHeartRate, zone: vm.heartRateZone, zoneColor: vm.heartRateZoneColor)
-            }
-            .padding(.horizontal, 20)
-
-            Spacer()
-
-            // Bottom Buttons
-            HStack(spacing: 16) {
-                // Pause / Resume
-                Button {
-                    if vm.isPaused { vm.resume() } else { vm.pause() }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: vm.isPaused ? "play.fill" : "pause.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text(vm.isPaused ? "Resume" : "Pause")
-                            .font(IWFont.labelLarge())
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Capsule())
-                }
-
-                // End Walk
-                Button {
-                    vm.endWalk()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "stop.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text("End Walk")
-                            .font(IWFont.labelLarge())
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.iwError)
-                    .clipShape(Capsule())
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 40)
         }
     }
 }
 
-// MARK: - Walk Stat Cell
+// MARK: - Compact Stat Pill
 
-private struct WalkStatCell: View {
+private struct CompactStatPill: View {
     let icon: String
     let value: String
     let label: String
     let iconColor: Color
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(iconColor)
             Text(value)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(.system(size: 18, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .contentTransition(.numericText())
                 .monospacedDigit()
             Text(label)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.7))
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.white.opacity(0.5))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 18)
-        .background(.white.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-    }
-}
-
-private struct HeartRateStatCell: View {
-    let bpm: Int
-    let zone: String
-    let zoneColor: Color
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "heart.fill")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(zoneColor)
-                .symbolEffect(.pulse)
-            Text("\(bpm)")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .contentTransition(.numericText())
-                .monospacedDigit()
-            Text(zone)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(zoneColor)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 18)
-        .background(.white.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .padding(.vertical, 10)
+        .background(.white.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 
