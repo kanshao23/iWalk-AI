@@ -38,32 +38,36 @@ struct TieredProgressBar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Walker + bubble + step count — all positioned together
+            // Walker + bubble + step count
             GeometryReader { geo in
                 let totalWidth = geo.size.width
                 let walkerX = max(totalWidth * walkerPosition, 40)
-                let bubbleX = min(walkerX + 50, totalWidth - 70)
+                // Bubble offset to the right, clamped to screen
+                let bubbleX = min(walkerX + 60, totalWidth - 80)
 
                 ZStack {
-                    // Speech bubble — top right of walker's head
+                    // Speech bubble — floating above with gap
                     SpeechBubble(text: encouragementText, isPositive: isAheadOfSchedule)
-                        .position(x: bubbleX, y: 20)
+                        .position(x: bubbleX, y: 22)
 
                     // Walker icon
                     Image(systemName: "figure.walk")
                         .font(.system(size: 128, weight: .medium))
                         .foregroundStyle(Color.iwPrimary)
-                        .position(x: walkerX, y: 100)
+                        .position(x: walkerX, y: 115)
 
-                    // Step count — directly below walker, follows walker
+                    // Step count — below walker with gap
                     Text(currentSteps.formatted())
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.iwPrimary)
                         .contentTransition(.numericText())
-                        .position(x: walkerX, y: 185)
+                        .position(x: walkerX, y: 200)
                 }
             }
-            .frame(height: 210)
+            .frame(height: 225)
+
+            // Spacer between steps and track
+            Spacer().frame(height: 16)
 
             // Track with tier markers
             GeometryReader { geo in
@@ -154,7 +158,7 @@ struct TieredProgressBar: View {
     }
 }
 
-// MARK: - Speech Bubble (comic style with tail)
+// MARK: - Speech Bubble (elliptical comic style)
 
 private struct SpeechBubble: View {
     let text: String
@@ -164,58 +168,52 @@ private struct SpeechBubble: View {
         isPositive ? Color.iwPrimaryFixed.opacity(0.4) : Color.iwTertiaryFixed.opacity(0.4)
     }
 
+    private var borderColor: Color {
+        isPositive ? Color.iwPrimary.opacity(0.3) : Color.iwTertiary.opacity(0.3)
+    }
+
     private var textColor: Color {
         isPositive ? Color.iwPrimary : Color.iwTertiary
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Bubble body
-            HStack(spacing: 4) {
+        VStack(spacing: -1) {
+            // Elliptical bubble body
+            HStack(spacing: 5) {
                 Image(systemName: isPositive ? "checkmark.circle.fill" : "clock.badge.exclamationmark")
-                    .font(.system(size: 11))
+                    .font(.system(size: 12))
                 Text(text)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
             }
             .foregroundStyle(textColor)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(bubbleColor)
-            .clipShape(BubbleShape())
+            .padding(.horizontal, 18)
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(bubbleColor)
+            )
+            .overlay(
+                Capsule()
+                    .stroke(borderColor, lineWidth: 1)
+            )
 
-            // Tail
-            BubbleTail()
-                .fill(bubbleColor)
-                .frame(width: 16, height: 10)
-                .offset(x: -30)
+            // Small tail — two shrinking circles to mimic comic bubble
+            HStack(spacing: 0) {
+                Spacer()
+                VStack(alignment: .leading, spacing: 2) {
+                    Circle()
+                        .fill(bubbleColor)
+                        .overlay(Circle().stroke(borderColor, lineWidth: 1))
+                        .frame(width: 8, height: 8)
+                    Circle()
+                        .fill(bubbleColor)
+                        .overlay(Circle().stroke(borderColor, lineWidth: 1))
+                        .frame(width: 5, height: 5)
+                        .offset(x: -3)
+                }
+                Spacer()
+                Spacer()
+            }
         }
-    }
-}
-
-// Rounded rectangle bubble shape
-private struct BubbleShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        RoundedRectangle(cornerRadius: 16).path(in: rect)
-    }
-}
-
-// Comic-style tail pointing down-left
-private struct BubbleTail: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        // Start from top-left of tail area
-        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
-        // Curve down to the tip
-        path.addQuadCurve(
-            to: CGPoint(x: rect.minX + 2, y: rect.maxY),
-            control: CGPoint(x: rect.minX, y: rect.midY)
-        )
-        // Go back up to top-right
-        path.addQuadCurve(
-            to: CGPoint(x: rect.maxX, y: rect.minY),
-            control: CGPoint(x: rect.midX, y: rect.midY)
-        )
-        path.closeSubpath()
-        return path
     }
 }
