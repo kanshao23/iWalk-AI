@@ -26,7 +26,7 @@ struct TieredProgressBar: View {
         VStack(spacing: 0) {
             GeometryReader { geo in
                 let trackWidth = geo.size.width
-                let trackY: CGFloat = 190
+                let trackY: CGFloat = 220
                 let walkerX = max(trackWidth * walkerPosition, 30)
                 let goalFlagX = trackWidth * min(Double(goalSteps) / Double(visualMax), 1.0)
 
@@ -36,13 +36,13 @@ struct TieredProgressBar: View {
                         .font(.system(size: 36, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.iwPrimary)
                         .contentTransition(.numericText())
-                        .position(x: walkerX, y: trackY - 178)
+                        .position(x: walkerX, y: trackY - 210)
 
-                    // Walker icon — positioned so feet are ABOVE the track
+                    // Walker icon — feet well above the track
                     Image(systemName: "figure.walk")
                         .font(.system(size: 128, weight: .medium))
                         .foregroundStyle(Color.iwPrimary)
-                        .position(x: walkerX, y: trackY - 90)
+                        .position(x: walkerX, y: trackY - 110)
 
                     // Background track
                     RoundedRectangle(cornerRadius: 4)
@@ -108,7 +108,7 @@ struct TieredProgressBar: View {
                     .position(x: goalFlagX, y: trackY - 24)
                 }
             }
-            .frame(height: 230)
+            .frame(height: 260)
         }
         .padding(.vertical, 8)
         .accessibilityElement(children: .ignore)
