@@ -63,6 +63,10 @@ final class DashboardViewModel {
 
     /// Load real data from HealthKit (falls back to mock if unavailable)
     func loadRealData() async {
+        // Try requesting auth if not yet authorized
+        if !healthKit.isAuthorized {
+            _ = await healthKit.requestAuthorization()
+        }
         guard healthKit.isAuthorized else { return }
 
         let steps = await healthKit.fetchTodaySteps()

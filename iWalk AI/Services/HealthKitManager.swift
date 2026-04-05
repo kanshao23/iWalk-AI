@@ -20,12 +20,10 @@ final class HealthKitManager {
     }()
 
     private init() {
-        // Check if already authorized (read auth can't be checked directly,
-        // but if sharing was determined, reads were likely granted too)
+        // HealthKit read authorization can't be checked directly.
+        // We check if we've previously requested (stored in UserDefaults).
         if HKHealthStore.isHealthDataAvailable() {
-            let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
-            let status = store.authorizationStatus(for: stepType)
-            isAuthorized = status != .notDetermined
+            isAuthorized = UserDefaults.standard.bool(forKey: "iw_healthkit_authorized")
         }
     }
 
@@ -41,8 +39,9 @@ final class HealthKitManager {
         do {
             try await store.requestAuthorization(toShare: [], read: readTypes)
             // We can't directly check read authorization, but assume success after request
-            _ = await fetchTodaySteps() // verify query works
+            _ = await fetchTodaySteps()
             isAuthorized = true
+            UserDefaults.standard.set(true, forKey: "iw_healthkit_authorized")
             return true
         } catch {
             authorizationError = error.localizedDescription
