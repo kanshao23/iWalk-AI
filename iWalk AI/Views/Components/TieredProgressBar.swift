@@ -72,29 +72,27 @@ struct TieredProgressBar: View {
         let reached: Bool
     }
 
+    /// Single goal: user custom goal if set, otherwise system-calculated goal
+    private var finalGoal: Int { goalSteps }
+
     private var ghostTargets: [GhostTarget] {
-        let minimumSteps = 1_500
-        let myGoalSteps = personalGoal?.targetSteps ?? 0
-        var targets: [GhostTarget] = []
+        let minimumSteps = 1_500   // keep streak alive
+        let goodSteps = 6_500      // Tier 3 — solid daily activity
 
-        targets.append(GhostTarget(
-            id: "min", steps: minimumSteps, label: "Min",
-            color: .iwTertiary, reached: currentSteps >= minimumSteps
-        ))
-
-        if myGoalSteps > 0 && myGoalSteps != goalSteps {
-            targets.append(GhostTarget(
-                id: "my", steps: myGoalSteps, label: "My Goal",
-                color: .iwSecondary, reached: currentSteps >= myGoalSteps
-            ))
-        }
-
-        targets.append(GhostTarget(
-            id: "goal", steps: goalSteps, label: "Goal",
-            color: .iwPrimary, reached: currentSteps >= goalSteps
-        ))
-
-        return targets
+        return [
+            GhostTarget(
+                id: "min", steps: minimumSteps, label: "Min",
+                color: .iwTertiary, reached: currentSteps >= minimumSteps
+            ),
+            GhostTarget(
+                id: "good", steps: goodSteps, label: "Good",
+                color: .iwSecondary, reached: currentSteps >= goodSteps
+            ),
+            GhostTarget(
+                id: "goal", steps: finalGoal, label: "Goal",
+                color: .iwPrimary, reached: currentSteps >= finalGoal
+            ),
+        ]
     }
 
     var body: some View {
@@ -244,28 +242,21 @@ struct TieredProgressBar: View {
 
             // Goals legend
             HStack(spacing: 14) {
-                // Minimum (orange)
                 HStack(spacing: 3) {
                     Circle().fill(Color.iwTertiary).frame(width: 8, height: 8)
                     Text("Min: 1.5k")
                         .font(IWFont.labelSmall())
                         .foregroundStyle(Color.iwTertiary)
                 }
-
-                // My Goal (blue)
-                if let pg = personalGoal {
-                    HStack(spacing: 3) {
-                        Circle().fill(Color.iwSecondary).frame(width: 8, height: 8)
-                        Text("My: \(pg.targetSteps.formatted())")
-                            .font(IWFont.labelSmall())
-                            .foregroundStyle(Color.iwSecondary)
-                    }
+                HStack(spacing: 3) {
+                    Circle().fill(Color.iwSecondary).frame(width: 8, height: 8)
+                    Text("Good: 6.5k")
+                        .font(IWFont.labelSmall())
+                        .foregroundStyle(Color.iwSecondary)
                 }
-
-                // Daily Goal (green)
                 HStack(spacing: 3) {
                     Circle().fill(Color.iwPrimary).frame(width: 8, height: 8)
-                    Text("Goal: \(goalSteps.formatted())")
+                    Text("Goal: \(finalGoal.formatted())")
                         .font(IWFont.labelSmall())
                         .foregroundStyle(Color.iwPrimary)
                 }
