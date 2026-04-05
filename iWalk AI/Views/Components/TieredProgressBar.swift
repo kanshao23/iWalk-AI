@@ -104,41 +104,33 @@ struct TieredProgressBar: View {
                 let walkerX = max(screenWidth * walkerVisibleFrac, 40)
 
                 ZStack {
-                    // Ghost walkers — always visible
+                    // Ghost walkers — same size as real walker, dashed outline
                     ForEach(ghostTargets) { target in
                         let frac = min(Double(target.steps) / Double(visibleMax), 0.95)
                         let ghostX = max(screenWidth * frac, 60)
 
                         ZStack {
-                            if target.reached {
-                                // Reached: solid color with checkmark
-                                Image(systemName: "figure.walk")
-                                    .font(.system(size: 60, weight: .medium))
-                                    .foregroundStyle(target.color.opacity(0.3))
+                            // Dashed outline figure (same size as walker)
+                            Image(systemName: "figure.walk")
+                                .font(.system(size: 128, weight: .medium))
+                                .foregroundStyle(target.color.opacity(target.reached ? 0.3 : 0.15))
+                                .overlay(
+                                    Image(systemName: "figure.walk")
+                                        .font(.system(size: 128, weight: .medium))
+                                        .foregroundStyle(target.color.opacity(target.reached ? 0.5 : 0.3))
+                                        .mask(DashedMask())
+                                )
 
-                                // Checkmark badge
+                            // Checkmark badge when reached
+                            if target.reached {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 20))
+                                    .font(.system(size: 24))
                                     .foregroundStyle(target.color)
-                                    .background(Circle().fill(Color.iwSurface).frame(width: 18, height: 18))
-                                    .offset(x: 20, y: -25)
-                            } else {
-                                // Not reached: striped ghost
-                                Image(systemName: "figure.walk")
-                                    .font(.system(size: 60, weight: .medium))
-                                    .foregroundStyle(target.color.opacity(0.1))
-                                    .overlay(
-                                        Image(systemName: "figure.walk")
-                                            .font(.system(size: 60, weight: .medium))
-                                            .foregroundStyle(target.color.opacity(0.25))
-                                            .mask(
-                                                StripedMask()
-                                                    .frame(width: 40, height: 80)
-                                            )
-                                    )
+                                    .background(Circle().fill(Color.iwSurface).frame(width: 22, height: 22))
+                                    .offset(x: 30, y: -40)
                             }
                         }
-                        .position(x: ghostX, y: 96)
+                        .position(x: ghostX, y: 80)
 
                         // Label below ghost
                         VStack(spacing: 1) {
@@ -148,7 +140,7 @@ struct TieredProgressBar: View {
                                 .font(.system(size: 11, weight: .medium, design: .rounded))
                         }
                         .foregroundStyle(target.reached ? target.color : target.color.opacity(0.5))
-                        .position(x: ghostX, y: 148)
+                        .position(x: ghostX, y: 166)
                     }
 
                     // Active walker (larger, solid)
@@ -276,16 +268,21 @@ struct TieredProgressBar: View {
     }
 }
 
-// MARK: - Striped mask for dashed ghost effect
+// MARK: - Dashed mask for ghost outline effect
 
-private struct StripedMask: View {
+private struct DashedMask: View {
     var body: some View {
         Canvas { context, size in
+            let dotSize: CGFloat = 3
             let spacing: CGFloat = 5
             var y: CGFloat = 0
             while y < size.height {
-                let rect = CGRect(x: 0, y: y, width: size.width, height: 2.5)
-                context.fill(Path(rect), with: .color(.white))
+                var x: CGFloat = (Int(y / spacing) % 2 == 0) ? 0 : spacing / 2 // offset alternate rows
+                while x < size.width {
+                    let rect = CGRect(x: x, y: y, width: dotSize, height: dotSize)
+                    context.fill(Path(ellipseIn: rect), with: .color(.white))
+                    x += spacing
+                }
                 y += spacing
             }
         }
