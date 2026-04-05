@@ -1,0 +1,347 @@
+import SwiftUI
+
+struct BadgesView: View {
+    @State private var vm = BadgesViewModel()
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 28) {
+                AppHeader()
+
+                // Leaderboard
+                AnimatedCard(delay: 0.1) {
+                    VStack(spacing: 16) {
+                        SectionHeader("Leaderboard", trailing: "View All") {
+                            vm.showLeaderboard = true
+                        }
+
+                        if let rank = vm.userRank {
+                            InfoCard(backgroundColor: .iwSurfaceContainerLowest) {
+                                HStack(spacing: 14) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.iwPrimaryFixed.opacity(0.3))
+                                            .frame(width: 52, height: 52)
+                                        Image(systemName: "trophy.fill")
+                                            .font(.system(size: 22))
+                                            .foregroundStyle(Color.iwPrimary)
+                                    }
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("YOUR RANK")
+                                            .font(IWFont.labelSmall())
+                                            .foregroundStyle(Color.iwOutline)
+                                        Text("Top 5% this week")
+                                            .font(IWFont.titleMedium())
+                                            .foregroundStyle(Color.iwOnSurface)
+                                        Text("\(rank.rank.formatted()) out of \(vm.totalParticipants.formatted()) walkers")
+                                            .font(IWFont.bodyMedium())
+                                            .foregroundStyle(Color.iwOutline)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Active Challenges
+                AnimatedCard(delay: 0.2) {
+                    VStack(spacing: 16) {
+                        SectionHeader("Active Challenges")
+
+                        ForEach(vm.challenges) { challenge in
+                            ChallengeCard(
+                                challenge: challenge,
+                                isExpanded: vm.expandedChallengeId == challenge.id,
+                                isAnimated: vm.challengeAnimated[challenge.id] ?? false,
+                                onTap: { vm.toggleExpandChallenge(challenge) },
+                                onToggleJoin: { vm.toggleChallenge(challenge) }
+                            )
+                        }
+                    }
+                }
+
+                // My Badges
+                AnimatedCard(delay: 0.3) {
+                    VStack(spacing: 16) {
+                        SectionHeader("My Badges")
+
+                        LazyVGrid(columns: [
+                            GridItem(.flexible(), spacing: 14),
+                            GridItem(.flexible(), spacing: 14),
+                            GridItem(.flexible(), spacing: 14),
+                        ], spacing: 14) {
+                            ForEach(vm.badges) { badge in
+                                BadgeCell(badge: badge)
+                                    .onTapGesture { vm.selectedBadge = badge }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 100)
+        }
+        .background(Color.iwSurface)
+        .onAppear { vm.animateOnAppear() }
+        .sheet(isPresented: $vm.showLeaderboard) {
+            LeaderboardSheet(entries: vm.leaderboard)
+        }
+        .sheet(item: $vm.selectedBadge) { badge in
+            BadgeDetailSheet(badge: badge)
+        }
+    }
+}
+
+// MARK: - Challenge Card
+
+private struct ChallengeCard: View {
+    let challenge: Challenge
+    let isExpanded: Bool
+    let isAnimated: Bool
+    let onTap: () -> Void
+    let onToggleJoin: () -> Void
+
+    var body: some View {
+        InfoCard(backgroundColor: .iwSurfaceContainerLowest) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 12) {
+                    Image(systemName: challenge.icon)
+                        .font(.system(size: 24))
+                        .foregroundStyle(challenge.iconColor)
+                        .frame(width: 48, height: 48)
+                        .background(challenge.iconColor.opacity(0.15))
+                        .clipShape(Circle())
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(challenge.name)
+                            .font(IWFont.titleMedium())
+                            .foregroundStyle(Color.iwOnSurface)
+                        if challenge.isJoined {
+                            Text("\(challenge.currentValue.formatted()) / \(challenge.goalValue.formatted()) \(challenge.unit)")
+                                .font(IWFont.bodyMedium())
+                                .foregroundStyle(Color.iwOutline)
+                        }
+                    }
+                    Spacer()
+
+                    if challenge.isJoined {
+                        Text("\(challenge.progressPercent)%")
+                            .font(IWFont.titleMedium())
+                            .foregroundStyle(Color.iwPrimary)
+                            .fontWeight(.semibold)
+                    } else {
+                        Button("Join") { onToggleJoin() }
+                            .font(IWFont.labelLarge())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.iwPrimary)
+                            .clipShape(Capsule())
+                    }
+                }
+
+                if challenge.isJoined {
+                    // Progress bar
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.iwSurfaceContainerHigh)
+                                .frame(height: 10)
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.iwPrimaryGradient)
+                                .frame(width: geometry.size.width * (isAnimated ? challenge.progress : 0), height: 10)
+                                .animation(.easeOut(duration: 0.8), value: isAnimated)
+                        }
+                    }
+                    .frame(height: 10)
+                }
+
+                if isExpanded {
+                    Text(challenge.description)
+                        .font(IWFont.bodyMedium())
+                        .foregroundStyle(Color.iwOutline)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+
+                    if challenge.isJoined {
+                        Button("Leave Challenge") { onToggleJoin() }
+                            .font(IWFont.labelMedium())
+                            .foregroundStyle(Color.iwError)
+                    }
+                }
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { onTap() }
+    }
+}
+
+// MARK: - Badge Cell
+
+private struct BadgeCell: View {
+    let badge: Badge
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(badge.isUnlocked ? badge.color.opacity(0.2) : Color.iwSurfaceContainerHigh)
+                    .frame(width: 60, height: 60)
+                Image(systemName: badge.isUnlocked ? badge.icon : "lock.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(badge.isUnlocked ? badge.color : Color.iwOutline)
+            }
+            Text(badge.name)
+                .font(IWFont.labelSmall())
+                .foregroundStyle(badge.isUnlocked ? Color.iwOnSurface : Color.iwOutline)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+
+            if !badge.isUnlocked && badge.progress > 0 {
+                // Mini progress bar
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color.iwSurfaceContainerHigh)
+                            .frame(height: 3)
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(badge.color)
+                            .frame(width: geo.size.width * badge.progress, height: 3)
+                    }
+                }
+                .frame(height: 3)
+                .padding(.horizontal, 8)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(Color.iwSurfaceContainerLowest)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .opacity(badge.isUnlocked ? 1.0 : 0.7)
+    }
+}
+
+// MARK: - Leaderboard Sheet
+
+private struct LeaderboardSheet: View {
+    let entries: [LeaderboardEntry]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List(entries) { entry in
+                HStack {
+                    Text("#\(entry.rank)")
+                        .font(IWFont.titleMedium())
+                        .foregroundStyle(entry.rank <= 3 ? Color.iwPrimary : Color.iwOutline)
+                        .frame(width: 50, alignment: .leading)
+                    Text(entry.name)
+                        .font(IWFont.bodyLarge())
+                        .foregroundStyle(Color.iwOnSurface)
+                        .fontWeight(entry.isCurrentUser ? .bold : .regular)
+                    Spacer()
+                    Text(entry.steps.formatted())
+                        .font(IWFont.labelLarge())
+                        .foregroundStyle(Color.iwOutline)
+                    Text("steps")
+                        .font(IWFont.labelSmall())
+                        .foregroundStyle(Color.iwOutline)
+                }
+                .listRowBackground(entry.isCurrentUser ? Color.iwPrimaryFixed.opacity(0.15) : Color.iwSurfaceContainerLowest)
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.iwSurface)
+            .navigationTitle("Leaderboard")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(Color.iwPrimary)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Badge Detail Sheet
+
+private struct BadgeDetailSheet: View {
+    let badge: Badge
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            Circle()
+                .fill(badge.isUnlocked ? badge.color.opacity(0.2) : Color.iwSurfaceContainerHigh)
+                .frame(width: 100, height: 100)
+                .overlay(
+                    Image(systemName: badge.isUnlocked ? badge.icon : "lock.fill")
+                        .font(.system(size: 44))
+                        .foregroundStyle(badge.isUnlocked ? badge.color : Color.iwOutline)
+                )
+
+            Text(badge.name)
+                .font(IWFont.headlineMedium())
+                .foregroundStyle(Color.iwOnSurface)
+
+            Text(badge.description)
+                .font(IWFont.bodyLarge())
+                .foregroundStyle(Color.iwOutline)
+                .multilineTextAlignment(.center)
+
+            InfoCard(backgroundColor: .iwSurfaceContainerLow) {
+                VStack(spacing: 8) {
+                    Text("Requirement")
+                        .font(IWFont.labelMedium())
+                        .foregroundStyle(Color.iwOutline)
+                    Text(badge.requirement)
+                        .font(IWFont.titleMedium())
+                        .foregroundStyle(Color.iwOnSurface)
+                    if badge.isUnlocked, let date = badge.unlockedDate {
+                        Text("Unlocked on \(date.formatted(.dateTime.month().day().year()))")
+                            .font(IWFont.labelMedium())
+                            .foregroundStyle(Color.iwPrimary)
+                    } else if badge.progress > 0 {
+                        Text("Progress: \(Int(badge.progress * 100))%")
+                            .font(IWFont.labelMedium())
+                            .foregroundStyle(Color.iwTertiary)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            if badge.isUnlocked {
+                Button {
+                    // Share using system share sheet
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "square.and.arrow.up")
+                        Text("Share Achievement")
+                    }
+                    .font(IWFont.labelLarge())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(Color.iwPrimaryGradient)
+                    .clipShape(Capsule())
+                }
+            }
+
+            Spacer()
+
+            Button("Done") { dismiss() }
+                .font(IWFont.labelLarge())
+                .foregroundStyle(Color.iwPrimary)
+                .padding(.bottom, 20)
+        }
+        .padding(.horizontal, 32)
+        .background(Color.iwSurface)
+        .presentationDetents([.medium])
+    }
+}
+
+extension Badge: Hashable {
+    static func == (lhs: Badge, rhs: Badge) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
