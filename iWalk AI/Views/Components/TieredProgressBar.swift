@@ -68,10 +68,12 @@ struct TieredProgressBar: View {
 
     private var finalGoal: Int { goalSteps }
 
-    // Medal colors
+    // Medal & achievement colors
     private static let bronze = Color(hex: 0xCD7F32)
     private static let silver = Color(hex: 0xA8A9AD)
-    private static let gold = Color(hex: 0xDAA520)
+    private static let gold = Color(hex: 0xB8860B)     // DarkGoldenrod — rich & vivid
+    private static let diamond = Color(hex: 0x5B9BD5)  // Diamond blue
+    private static let legendary = Color(hex: 0x9B59B6) // Royal purple
 
     private var ghostTargets: [GhostTarget] {
         [
@@ -81,6 +83,10 @@ struct TieredProgressBar: View {
                         color: Self.silver, reached: currentSteps >= 6_500),
             GhostTarget(id: "goal", steps: finalGoal, label: "Gold",
                         color: Self.gold, reached: currentSteps >= finalGoal),
+            GhostTarget(id: "beyond", steps: 15_000, label: "Beyond",
+                        color: Self.diamond, reached: currentSteps >= 15_000),
+            GhostTarget(id: "legend", steps: 20_000, label: "Legend",
+                        color: Self.legendary, reached: currentSteps >= 20_000),
         ]
     }
 
