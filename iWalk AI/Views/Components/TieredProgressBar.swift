@@ -7,26 +7,15 @@ struct TieredProgressBar: View {
     let personalGoal: PersonalGoal?
     var animatedProgress: Double?
 
-    // The visible range ends at goalSteps by default.
-    // The full scrollable range goes to the highest tier (20k).
-    private var visibleMax: Int { goalSteps }
     private var scrollableMax: Int { 20_000 }
 
-    // How wide the full scrollable content is relative to screen width
-    private var scrollScale: Double {
-        Double(scrollableMax) / Double(visibleMax)
+    // Screen shows 0..goalSteps, scrollable to 20k
+    private func scrollScale(screenWidth: CGFloat) -> CGFloat {
+        screenWidth * CGFloat(Double(scrollableMax) / Double(goalSteps))
     }
 
-    private func tierPosition(_ tier: StepTier, in width: CGFloat) -> CGFloat {
-        width * CGFloat(Double(tier.stepsRequired) / Double(scrollableMax))
-    }
-
-    private var walkerFraction: Double {
-        min(Double(currentSteps) / Double(scrollableMax), 1.0)
-    }
-
-    private var goalFraction: Double {
-        min(Double(goalSteps) / Double(scrollableMax), 1.0)
+    private func xPosition(for steps: Int, in contentWidth: CGFloat) -> CGFloat {
+        contentWidth * CGFloat(Double(steps) / Double(scrollableMax))
     }
 
     /// Expected progress based on time of day (7:00–23:00)
@@ -63,7 +52,8 @@ struct TieredProgressBar: View {
         }
     }
 
-    // Three ghost milestones — always shown, with reached state
+    // MARK: - Ghost targets
+
     private struct GhostTarget: Identifiable {
         let id: String
         let steps: Int
@@ -72,92 +62,115 @@ struct TieredProgressBar: View {
         let reached: Bool
     }
 
-    /// Single goal: user custom goal if set, otherwise system-calculated goal
     private var finalGoal: Int { goalSteps }
 
     private var ghostTargets: [GhostTarget] {
-        let minimumSteps = 3_000   // keep streak alive
-        let goodSteps = 6_500      // Tier 3 — solid daily activity
-
-        return [
-            GhostTarget(
-                id: "min", steps: minimumSteps, label: "Min",
-                color: .iwTertiary, reached: currentSteps >= minimumSteps
-            ),
-            GhostTarget(
-                id: "good", steps: goodSteps, label: "Good",
-                color: .iwSecondary, reached: currentSteps >= goodSteps
-            ),
-            GhostTarget(
-                id: "goal", steps: finalGoal, label: "Goal",
-                color: .iwPrimary, reached: currentSteps >= finalGoal
-            ),
+        [
+            GhostTarget(id: "min", steps: 3_000, label: "Min",
+                        color: .iwTertiary, reached: currentSteps >= 3_000),
+            GhostTarget(id: "good", steps: 6_500, label: "Good",
+                        color: .iwSecondary, reached: currentSteps >= 6_500),
+            GhostTarget(id: "goal", steps: finalGoal, label: "Goal",
+                        color: .iwPrimary, reached: currentSteps >= finalGoal),
         ]
     }
 
+    // MARK: - Body
+
     var body: some View {
         VStack(spacing: 0) {
-            // Walker + ghost targets + step count
+            // Unified scrollable area: walkers + track
             GeometryReader { geo in
                 let screenWidth = geo.size.width
-                let walkerVisibleFrac = min(Double(currentSteps) / Double(visibleMax), 1.0)
-                let walkerX = max(screenWidth * walkerVisibleFrac, 40)
+                let contentWidth = scrollScale(screenWidth: screenWidth)
 
-                ZStack {
-                    // Ghost walkers — same size as real walker, dashed outline
-                    ForEach(ghostTargets) { target in
-                        let frac = min(Double(target.steps) / Double(visibleMax), 0.95)
-                        let ghostX = max(screenWidth * frac, 60)
-
+                ScrollView(.horizontal, showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        // Walker area
                         ZStack {
-                            // Dashed outline figure (same size as walker)
+                            // Ghost walkers
+                            ForEach(ghostTargets) { target in
+                                let ghostX = xPosition(for: target.steps, in: contentWidth)
+                                ghostWalkerView(target: target)
+                                    .position(x: ghostX, y: 105)
+
+                                // Label below ghost
+                                VStack(spacing: 1) {
+                                    Text(target.label)
+                                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    Text(target.steps.formatted())
+                                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                                }
+                                .foregroundStyle(target.reached ? target.color : target.color.opacity(0.5))
+                                .position(x: ghostX, y: 190)
+                            }
+
+                            // Active walker
+                            let walkerX = max(xPosition(for: currentSteps, in: contentWidth), 40)
+
+                            // Step count above head
+                            Text(currentSteps.formatted())
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color.iwPrimary)
+                                .contentTransition(.numericText())
+                                .position(x: walkerX, y: 16)
+
                             Image(systemName: "figure.walk")
                                 .font(.system(size: 128, weight: .medium))
-                                .foregroundStyle(target.color.opacity(target.reached ? 0.2 : 0.06))
-                                .overlay(
-                                    Image(systemName: "figure.walk")
-                                        .font(.system(size: 128, weight: .medium))
-                                        .foregroundStyle(target.color.opacity(target.reached ? 0.3 : 0.15))
-                                        .mask(DashedMask())
-                                )
+                                .foregroundStyle(Color.iwPrimary)
+                                .position(x: walkerX, y: 105)
+                        }
+                        .frame(width: contentWidth, height: 210)
 
-                            // Checkmark badge when reached
-                            if target.reached {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundStyle(target.color)
-                                    .background(Circle().fill(Color.iwSurface).frame(width: 22, height: 22))
-                                    .offset(x: 30, y: -40)
+                        // Progress track
+                        ZStack(alignment: .leading) {
+                            // Background track
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.iwSurfaceContainerHigh)
+                                .frame(width: contentWidth, height: 14)
+
+                            // Filled track
+                            let filledWidth = xPosition(for: currentSteps, in: contentWidth)
+                            if filledWidth > 1 {
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.iwPrimaryGradient)
+                                    .frame(width: filledWidth, height: 14)
+                            }
+
+                            // Tier markers
+                            ForEach(tiers) { tier in
+                                let x = xPosition(for: tier.stepsRequired, in: contentWidth)
+
+                                Circle()
+                                    .fill(tier.isReached ? Color.iwPrimary : Color.iwSurfaceContainerHighest)
+                                    .frame(width: 20, height: 20)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color.iwSurfaceContainerLowest, lineWidth: 2.5)
+                                    )
+                                    .scaleEffect(tier.isReached ? 1.0 : 0.85)
+                                    .offset(x: x - 10)
+
+                                // Tier label below
+                                Text(tierLabel(tier.stepsRequired))
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundStyle(tier.isReached ? Color.iwPrimary : Color.iwOutlineVariant)
+                                    .offset(x: x - 12, y: 22)
+
+                                // Coin reward above
+                                if tier.isReached {
+                                    Text("+\(tier.coinReward)")
+                                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                                        .foregroundStyle(Color.iwTertiaryContainer)
+                                        .offset(x: x - 10, y: -20)
+                                }
                             }
                         }
-                        .position(x: ghostX, y: 80)
-
-                        // Label below ghost
-                        VStack(spacing: 1) {
-                            Text(target.label)
-                                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                            Text(target.steps.formatted())
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
-                        }
-                        .foregroundStyle(target.reached ? target.color : target.color.opacity(0.5))
-                        .position(x: ghostX, y: 166)
+                        .frame(width: contentWidth, height: 50)
                     }
-
-                    // Active walker (larger, solid)
-                    Image(systemName: "figure.walk")
-                        .font(.system(size: 128, weight: .medium))
-                        .foregroundStyle(Color.iwPrimary)
-                        .position(x: walkerX, y: 80)
-
-                    // Step count below walker
-                    Text(currentSteps.formatted())
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.iwPrimary)
-                        .contentTransition(.numericText())
-                        .position(x: walkerX, y: 166)
                 }
             }
-            .frame(height: 190)
+            .frame(height: 270)
 
             // AI insight card
             HStack(spacing: 6) {
@@ -173,64 +186,7 @@ struct TieredProgressBar: View {
             .frame(maxWidth: .infinity)
             .background(Color.iwSurfaceContainerLow)
             .clipShape(RoundedRectangle(cornerRadius: 14))
-            .padding(.bottom, 16)
-
-            // Scrollable progress track
-            GeometryReader { geo in
-                let screenWidth = geo.size.width
-                // Full content width: screen fills 0..goalSteps, rest scrolls
-                let contentWidth = screenWidth * scrollScale
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    ZStack(alignment: .leading) {
-                        // Background track
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.iwSurfaceContainerHigh)
-                            .frame(width: contentWidth, height: 14)
-
-                        // Filled track
-                        let filledWidth = contentWidth * walkerFraction
-                        if filledWidth > 1 {
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color.iwPrimaryGradient)
-                                .frame(width: filledWidth, height: 14)
-                        }
-
-                        // Tier markers
-                        ForEach(tiers) { tier in
-                            let x = tierPosition(tier, in: contentWidth)
-
-                            // Marker circle
-                            Circle()
-                                .fill(tier.isReached ? Color.iwPrimary : Color.iwSurfaceContainerHighest)
-                                .frame(width: 20, height: 20)
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.iwSurfaceContainerLowest, lineWidth: 2.5)
-                                )
-                                .scaleEffect(tier.isReached ? 1.0 : 0.85)
-                                .offset(x: x - 10) // center the circle
-
-                            // Tier label below
-                            Text(tierLabel(tier.stepsRequired))
-                                .font(.system(size: 12, weight: .medium, design: .rounded))
-                                .foregroundStyle(tier.isReached ? Color.iwPrimary : Color.iwOutlineVariant)
-                                .offset(x: x - 12, y: 22)
-
-                            // Coin reward above
-                            if tier.isReached {
-                                Text("+\(tier.coinReward)")
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                                    .foregroundStyle(Color.iwTertiaryContainer)
-                                    .offset(x: x - 10, y: -20)
-                            }
-                        }
-                    }
-                    .frame(width: contentWidth, height: 50)
-                    .padding(.vertical, 4)
-                }
-            }
-            .frame(height: 58)
+            .padding(.top, 8)
 
             // Goals legend
             HStack(spacing: 14) {
@@ -260,6 +216,31 @@ struct TieredProgressBar: View {
         .accessibilityLabel("\(currentSteps) of \(goalSteps) steps")
     }
 
+    // MARK: - Ghost walker view
+
+    @ViewBuilder
+    private func ghostWalkerView(target: GhostTarget) -> some View {
+        ZStack {
+            Image(systemName: "figure.walk")
+                .font(.system(size: 128, weight: .medium))
+                .foregroundStyle(target.color.opacity(target.reached ? 0.2 : 0.06))
+                .overlay(
+                    Image(systemName: "figure.walk")
+                        .font(.system(size: 128, weight: .medium))
+                        .foregroundStyle(target.color.opacity(target.reached ? 0.3 : 0.15))
+                        .mask(DashedMask())
+                )
+
+            if target.reached {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(target.color)
+                    .background(Circle().fill(Color.iwSurface).frame(width: 22, height: 22))
+                    .offset(x: 30, y: -40)
+            }
+        }
+    }
+
     private func tierLabel(_ steps: Int) -> String {
         if steps >= 1000 {
             return "\(steps / 1000)k"
@@ -277,7 +258,7 @@ private struct DashedMask: View {
             let spacing: CGFloat = 5
             var y: CGFloat = 0
             while y < size.height {
-                var x: CGFloat = (Int(y / spacing) % 2 == 0) ? 0 : spacing / 2 // offset alternate rows
+                var x: CGFloat = (Int(y / spacing) % 2 == 0) ? 0 : spacing / 2
                 while x < size.width {
                     let rect = CGRect(x: x, y: y, width: dotSize, height: dotSize)
                     context.fill(Path(ellipseIn: rect), with: .color(.white))
