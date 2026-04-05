@@ -115,15 +115,17 @@ struct HabitsView: View {
                                 Text("").frame(width: 36, height: 36)
                             }
 
-                            // Days of month
+                            // Days of month — medal colors based on steps
                             ForEach(1...vm.monthData.daysInMonth, id: \.self) { day in
                                 let habitDay = vm.monthData.days.first { $0.dayNumber == day }
-                                let completion = habitDay?.completion ?? .none
+                                let steps = habitDay?.steps ?? 0
+                                let medal = medalForSteps(steps)
                                 let isSelected = vm.selectedDay?.dayNumber == day
+                                let isFuture = habitDay == nil || (habitDay?.completion == HabitCompletion.none && steps == 0 && day > Calendar.current.component(.day, from: .now))
 
                                 ZStack {
                                     Circle()
-                                        .fill(dayColor(completion: completion))
+                                        .fill(isFuture ? Color.iwSurfaceContainerLow : medal.color)
                                         .frame(width: 36, height: 36)
                                     if isSelected {
                                         Circle()
@@ -132,7 +134,7 @@ struct HabitsView: View {
                                     }
                                     Text("\(day)")
                                         .font(IWFont.labelMedium())
-                                        .foregroundStyle(completion == .complete ? .white : Color.iwOnSurface)
+                                        .foregroundStyle(isFuture ? Color.iwOnSurface : (medal.textWhite ? .white : Color.iwOnSurface))
                                 }
                                 .onTapGesture {
                                     if let habitDay {
@@ -144,7 +146,8 @@ struct HabitsView: View {
 
                         // Selected day detail
                         if let selected = vm.selectedDay {
-                            InfoCard(backgroundColor: .iwPrimaryContainer.opacity(0.1)) {
+                            let selectedMedal = medalForSteps(selected.steps)
+                            InfoCard(backgroundColor: selectedMedal.color.opacity(0.12)) {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(selected.date.formatted(.dateTime.weekday(.wide).month().day()))
@@ -152,15 +155,15 @@ struct HabitsView: View {
                                             .foregroundStyle(Color.iwOnSurface)
                                         Text("\(selected.steps.formatted()) steps")
                                             .font(IWFont.titleMedium())
-                                            .foregroundStyle(Color.iwPrimary)
+                                            .foregroundStyle(selectedMedal.color)
                                     }
                                     Spacer()
-                                    Text(completionLabel(selected.completion))
+                                    Text(selectedMedal.label)
                                         .font(IWFont.labelMedium())
-                                        .foregroundStyle(completionLabelColor(selected.completion))
+                                        .foregroundStyle(selectedMedal.color)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
-                                        .background(completionLabelColor(selected.completion).opacity(0.1))
+                                        .background(selectedMedal.color.opacity(0.1))
                                         .clipShape(Capsule())
                                 }
                             }
@@ -261,27 +264,36 @@ struct HabitsView: View {
         .onAppear { vm.animateOnAppear() }
     }
 
-    private func dayColor(completion: HabitCompletion) -> Color {
-        switch completion {
-        case .complete: return .iwPrimary
-        case .partial: return .iwPrimaryFixed.opacity(0.4)
-        case .none: return .iwSurfaceContainerLow
-        }
+    // MARK: - Medal system
+
+    private struct MedalInfo {
+        let label: String
+        let color: Color
+        let textWhite: Bool
     }
 
-    private func completionLabel(_ completion: HabitCompletion) -> String {
-        switch completion {
-        case .complete: "Goal Met"
-        case .partial: "Partial"
-        case .none: "Missed"
-        }
-    }
+    private static let bronze = Color(hex: 0xCD7F32)
+    private static let silver = Color(hex: 0xA8A9AD)
+    private static let gold = Color(hex: 0xB8860B)
+    private static let diamond = Color(hex: 0x5B9BD5)
+    private static let legendary = Color(hex: 0x9B59B6)
 
-    private func completionLabelColor(_ completion: HabitCompletion) -> Color {
-        switch completion {
-        case .complete: .iwPrimary
-        case .partial: .iwTertiary
-        case .none: .iwError
+    private func medalForSteps(_ steps: Int) -> MedalInfo {
+        switch steps {
+        case 20_000...:
+            return MedalInfo(label: "Legend", color: Self.legendary, textWhite: true)
+        case 15_000...:
+            return MedalInfo(label: "Beyond", color: Self.diamond, textWhite: true)
+        case 10_000...:
+            return MedalInfo(label: "Gold", color: Self.gold, textWhite: true)
+        case 6_500...:
+            return MedalInfo(label: "Silver", color: Self.silver, textWhite: false)
+        case 3_000...:
+            return MedalInfo(label: "Bronze", color: Self.bronze, textWhite: true)
+        case 1...:
+            return MedalInfo(label: "Started", color: Color.iwSurfaceContainerHigh, textWhite: false)
+        default:
+            return MedalInfo(label: "Rest Day", color: Color.iwSurfaceContainerLow, textWhite: false)
         }
     }
 }
