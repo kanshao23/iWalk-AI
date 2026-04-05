@@ -63,41 +63,65 @@ struct TieredProgressBar: View {
         }
     }
 
+    // Three ghost milestones
+    private var ghostTargets: [(steps: Int, label: String, color: Color)] {
+        let minimumSteps = 1_500 // streak minimum
+        let myGoalSteps = personalGoal?.targetSteps ?? 0
+        var targets: [(steps: Int, label: String, color: Color)] = []
+
+        if currentSteps < minimumSteps {
+            targets.append((minimumSteps, "Min", .iwTertiary))
+        }
+        if myGoalSteps > 0 && currentSteps < myGoalSteps && myGoalSteps != goalSteps {
+            targets.append((myGoalSteps, "My Goal", .iwSecondary))
+        }
+        if currentSteps < goalSteps {
+            targets.append((goalSteps, "Goal", .iwPrimary))
+        }
+        return targets
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            // Walker + ghost target + step count (not scrollable)
+            // Walker + ghost targets + step count
             GeometryReader { geo in
                 let screenWidth = geo.size.width
-                // Walker and ghost mapped to the visible (0..goalSteps) range
                 let walkerVisibleFrac = min(Double(currentSteps) / Double(visibleMax), 1.0)
                 let walkerX = max(screenWidth * walkerVisibleFrac, 40)
-                let goalX = screenWidth * 0.92 // goal near right edge
-                let showGhost = currentSteps < goalSteps
 
                 ZStack {
-                    // Ghost walker at goal position
-                    if showGhost {
+                    // Ghost walkers at each target position
+                    ForEach(Array(ghostTargets.enumerated()), id: \.offset) { _, target in
+                        let frac = min(Double(target.steps) / Double(visibleMax), 0.95)
+                        let ghostX = max(screenWidth * frac, 60)
+
+                        // Ghost figure
                         Image(systemName: "figure.walk")
-                            .font(.system(size: 128, weight: .medium))
-                            .foregroundStyle(Color.iwPrimary.opacity(0.12))
+                            .font(.system(size: 80, weight: .medium))
+                            .foregroundStyle(target.color.opacity(0.15))
                             .overlay(
                                 Image(systemName: "figure.walk")
-                                    .font(.system(size: 128, weight: .medium))
-                                    .foregroundStyle(Color.iwPrimary.opacity(0.25))
+                                    .font(.system(size: 80, weight: .medium))
+                                    .foregroundStyle(target.color.opacity(0.3))
                                     .mask(
                                         StripedMask()
-                                            .frame(width: 80, height: 150)
+                                            .frame(width: 52, height: 100)
                                     )
                             )
-                            .position(x: goalX, y: 80)
+                            .position(x: ghostX, y: 96)
 
-                        Text(goalSteps.formatted())
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color.iwOutlineVariant)
-                            .position(x: goalX, y: 166)
+                        // Label + step count below ghost
+                        VStack(spacing: 1) {
+                            Text(target.label)
+                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            Text(target.steps.formatted())
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                        }
+                        .foregroundStyle(target.color.opacity(0.6))
+                        .position(x: ghostX, y: 155)
                     }
 
-                    // Active walker
+                    // Active walker (larger, solid)
                     Image(systemName: "figure.walk")
                         .font(.system(size: 128, weight: .medium))
                         .foregroundStyle(Color.iwPrimary)
@@ -186,26 +210,32 @@ struct TieredProgressBar: View {
             }
             .frame(height: 58)
 
-            // Goals row
-            HStack(spacing: 16) {
-                HStack(spacing: 4) {
-                    Image(systemName: "flag.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(currentSteps >= goalSteps ? Color.iwPrimary : Color.iwOutlineVariant)
-                    Text("Daily Goal: \(goalSteps.formatted())")
-                        .font(IWFont.labelMedium())
-                        .foregroundStyle(Color.iwOutline)
+            // Goals legend
+            HStack(spacing: 14) {
+                // Minimum (orange)
+                HStack(spacing: 3) {
+                    Circle().fill(Color.iwTertiary).frame(width: 8, height: 8)
+                    Text("Min: 1.5k")
+                        .font(IWFont.labelSmall())
+                        .foregroundStyle(Color.iwTertiary)
                 }
 
+                // My Goal (blue)
                 if let pg = personalGoal {
-                    HStack(spacing: 4) {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(pg.isReached ? Color.iwPrimary : Color.iwTertiary)
-                        Text("My Goal: \(pg.targetSteps.formatted())")
-                            .font(IWFont.labelMedium())
-                            .foregroundStyle(pg.isReached ? Color.iwPrimary : Color.iwTertiary)
+                    HStack(spacing: 3) {
+                        Circle().fill(Color.iwSecondary).frame(width: 8, height: 8)
+                        Text("My: \(pg.targetSteps.formatted())")
+                            .font(IWFont.labelSmall())
+                            .foregroundStyle(Color.iwSecondary)
                     }
+                }
+
+                // Daily Goal (green)
+                HStack(spacing: 3) {
+                    Circle().fill(Color.iwPrimary).frame(width: 8, height: 8)
+                    Text("Goal: \(goalSteps.formatted())")
+                        .font(IWFont.labelSmall())
+                        .foregroundStyle(Color.iwPrimary)
                 }
             }
             .padding(.top, 6)
