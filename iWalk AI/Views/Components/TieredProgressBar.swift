@@ -26,22 +26,22 @@ struct TieredProgressBar: View {
         VStack(spacing: 0) {
             GeometryReader { geo in
                 let trackWidth = geo.size.width
-                let trackY: CGFloat = 105
+                let trackY: CGFloat = 160
                 let walkerX = trackWidth * walkerPosition
 
                 ZStack(alignment: .leading) {
                     // Step count above walker
                     Text(currentSteps.formatted())
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.iwPrimary)
                         .contentTransition(.numericText())
-                        .position(x: walkerX, y: trackY - 95)
+                        .position(x: walkerX, y: trackY - 148)
 
                     // Walker icon
                     Image(systemName: "figure.walk")
-                        .font(.system(size: 64, weight: .medium))
+                        .font(.system(size: 128, weight: .medium))
                         .foregroundStyle(Color.iwPrimary)
-                        .position(x: walkerX, y: trackY - 44)
+                        .position(x: walkerX, y: trackY - 70)
 
                     // Background track
                     RoundedRectangle(cornerRadius: 4)
@@ -107,7 +107,7 @@ struct TieredProgressBar: View {
                     .position(x: trackWidth - 10, y: trackY - 20)
                 }
             }
-            .frame(height: 145)
+            .frame(height: 200)
         }
         .padding(.vertical, 8)
         .accessibilityElement(children: .ignore)
