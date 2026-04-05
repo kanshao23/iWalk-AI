@@ -144,16 +144,25 @@ struct TieredProgressBar: View {
                             // Tier markers
                             ForEach(tiers) { tier in
                                 let x = xPosition(for: tier.stepsRequired, in: contentWidth)
+                                let isGoalTier = tier.stepsRequired == goalSteps
 
-                                Circle()
-                                    .fill(tier.isReached ? Color.iwPrimary : Color.iwSurfaceContainerHighest)
-                                    .frame(width: 20, height: 20)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Color.iwSurfaceContainerLowest, lineWidth: 2.5)
-                                    )
-                                    .scaleEffect(tier.isReached ? 1.0 : 0.85)
-                                    .offset(x: x - 10)
+                                if isGoalTier {
+                                    // Star shape for the goal tier
+                                    Image(systemName: tier.isReached ? "star.fill" : "star")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundStyle(tier.isReached ? Color.iwPrimary : Color.iwOutlineVariant)
+                                        .offset(x: x - 10)
+                                } else {
+                                    Circle()
+                                        .fill(tier.isReached ? Color.iwPrimary : Color.iwSurfaceContainerHighest)
+                                        .frame(width: 20, height: 20)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(Color.iwSurfaceContainerLowest, lineWidth: 2.5)
+                                        )
+                                        .scaleEffect(tier.isReached ? 1.0 : 0.85)
+                                        .offset(x: x - 10)
+                                }
 
                                 // Tier label below
                                 Text(tierLabel(tier.stepsRequired))
