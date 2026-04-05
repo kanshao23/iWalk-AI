@@ -158,7 +158,7 @@ struct TieredProgressBar: View {
     }
 }
 
-// MARK: - Speech Bubble (elliptical comic style)
+// MARK: - Speech Bubble (comic style with pointed tail)
 
 private struct SpeechBubble: View {
     let text: String
@@ -177,43 +177,60 @@ private struct SpeechBubble: View {
     }
 
     var body: some View {
-        VStack(spacing: -1) {
-            // Elliptical bubble body
-            HStack(spacing: 5) {
-                Image(systemName: isPositive ? "checkmark.circle.fill" : "clock.badge.exclamationmark")
-                    .font(.system(size: 12))
-                Text(text)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-            }
-            .foregroundStyle(textColor)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 10)
-            .background(
-                Capsule()
-                    .fill(bubbleColor)
-            )
-            .overlay(
-                Capsule()
-                    .stroke(borderColor, lineWidth: 1)
-            )
-
-            // Small tail — two shrinking circles to mimic comic bubble
-            HStack(spacing: 0) {
-                Spacer()
-                VStack(alignment: .leading, spacing: 2) {
-                    Circle()
-                        .fill(bubbleColor)
-                        .overlay(Circle().stroke(borderColor, lineWidth: 1))
-                        .frame(width: 8, height: 8)
-                    Circle()
-                        .fill(bubbleColor)
-                        .overlay(Circle().stroke(borderColor, lineWidth: 1))
-                        .frame(width: 5, height: 5)
-                        .offset(x: -3)
-                }
-                Spacer()
-                Spacer()
-            }
+        HStack(spacing: 5) {
+            Image(systemName: isPositive ? "checkmark.circle.fill" : "clock.badge.exclamationmark")
+                .font(.system(size: 12))
+            Text(text)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
         }
+        .foregroundStyle(textColor)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
+        .background(
+            ComicBubbleShape(tailOffset: -30)
+                .fill(bubbleColor)
+        )
+        .background(
+            ComicBubbleShape(tailOffset: -30)
+                .stroke(borderColor, lineWidth: 1)
+        )
+    }
+}
+
+/// Rounded-rect bubble with a small curved tail at the bottom
+private struct ComicBubbleShape: Shape {
+    let tailOffset: CGFloat // negative = left of center
+
+    func path(in rect: CGRect) -> Path {
+        let cornerRadius: CGFloat = 18
+        let tailWidth: CGFloat = 14
+        let tailHeight: CGFloat = 10
+
+        var path = Path()
+        let bubbleRect = CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height - tailHeight)
+
+        // Main rounded rect
+        path.addRoundedRect(in: bubbleRect, cornerSize: CGSize(width: cornerRadius, height: cornerRadius))
+
+        // Tail at bottom
+        let tailCenterX = bubbleRect.midX + tailOffset
+        let tailLeft = tailCenterX - tailWidth / 2
+        let tailRight = tailCenterX + tailWidth / 2
+        let tailTip = CGPoint(x: tailCenterX - 6, y: rect.maxY)
+
+        var tailPath = Path()
+        tailPath.move(to: CGPoint(x: tailLeft, y: bubbleRect.maxY - 1))
+        tailPath.addQuadCurve(
+            to: tailTip,
+            control: CGPoint(x: tailLeft - 2, y: bubbleRect.maxY + tailHeight / 2)
+        )
+        tailPath.addQuadCurve(
+            to: CGPoint(x: tailRight, y: bubbleRect.maxY - 1),
+            control: CGPoint(x: tailCenterX + 4, y: bubbleRect.maxY + 2)
+        )
+        tailPath.closeSubpath()
+
+        path.addPath(tailPath)
+        return path
     }
 }
