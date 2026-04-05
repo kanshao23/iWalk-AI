@@ -26,8 +26,9 @@ struct TieredProgressBar: View {
         VStack(spacing: 0) {
             GeometryReader { geo in
                 let trackWidth = geo.size.width
-                let trackY: CGFloat = 160
-                let walkerX = trackWidth * walkerPosition
+                let trackY: CGFloat = 190
+                let walkerX = max(trackWidth * walkerPosition, 30)
+                let goalFlagX = trackWidth * min(Double(goalSteps) / Double(visualMax), 1.0)
 
                 ZStack(alignment: .leading) {
                     // Step count above walker
@@ -35,13 +36,13 @@ struct TieredProgressBar: View {
                         .font(.system(size: 36, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.iwPrimary)
                         .contentTransition(.numericText())
-                        .position(x: walkerX, y: trackY - 148)
+                        .position(x: walkerX, y: trackY - 178)
 
-                    // Walker icon
+                    // Walker icon — positioned so feet are ABOVE the track
                     Image(systemName: "figure.walk")
                         .font(.system(size: 128, weight: .medium))
                         .foregroundStyle(Color.iwPrimary)
-                        .position(x: walkerX, y: trackY - 70)
+                        .position(x: walkerX, y: trackY - 90)
 
                     // Background track
                     RoundedRectangle(cornerRadius: 4)
@@ -86,7 +87,7 @@ struct TieredProgressBar: View {
                         }
                     }
 
-                    // Personal goal star
+                    // Personal goal star — positioned above the track at goal position
                     if let pgPos = personalGoalPosition {
                         let pgX = trackWidth * pgPos
                         Image(systemName: "star.fill")
@@ -95,19 +96,19 @@ struct TieredProgressBar: View {
                             .position(x: pgX, y: trackY - 16)
                     }
 
-                    // Goal flag at end
+                    // Goal flag at the goalSteps position (not at visual max end)
                     VStack(spacing: 0) {
                         Image(systemName: "flag.fill")
                             .font(.system(size: 14))
-                            .foregroundStyle(walkerPosition >= 1.0 ? Color.iwPrimary : Color.iwOutlineVariant)
+                            .foregroundStyle(currentSteps >= goalSteps ? Color.iwPrimary : Color.iwOutlineVariant)
                         Text(goalSteps.formatted())
                             .font(.system(size: 11, weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.iwOutline)
                     }
-                    .position(x: trackWidth - 10, y: trackY - 20)
+                    .position(x: goalFlagX, y: trackY - 24)
                 }
             }
-            .frame(height: 200)
+            .frame(height: 230)
         }
         .padding(.vertical, 8)
         .accessibilityElement(children: .ignore)
