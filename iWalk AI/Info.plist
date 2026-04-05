@@ -6,5 +6,7 @@
 	<string>iWalk AI uses motion data to count your steps and track walking distance in real time.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>iWalk AI reads your step count, distance, calories, and heart rate to track your walking progress and provide personalized insights.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>iWalk AI shows your location on the map during walks to track your route.</string>
 </dict>
 </plist>

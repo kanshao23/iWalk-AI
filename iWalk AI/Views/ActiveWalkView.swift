@@ -1,5 +1,40 @@
 import SwiftUI
 import MapKit
+import CoreLocation
+import Combine
+
+// MARK: - Location Manager for Walk
+
+final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+    @Published var isTracking = false
+    private let manager = CLLocationManager()
+
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+        manager.activityType = .fitness
+    }
+
+    func startTracking() {
+        let status = manager.authorizationStatus
+        if status == .notDetermined {
+            manager.requestWhenInUseAuthorization()
+        }
+        manager.startUpdatingLocation()
+    }
+
+    func stopTracking() {
+        manager.stopUpdatingLocation()
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        if manager.authorizationStatus == .authorizedWhenInUse ||
+           manager.authorizationStatus == .authorizedAlways {
+            manager.startUpdatingLocation()
+        }
+    }
+}
 
 // MARK: - Container
 
@@ -65,16 +100,24 @@ private struct CountdownOverlay: View {
 
 private struct ActiveWalkContent: View {
     @Bindable var vm: ActiveWalkViewModel
+    @StateObject private var locationManager = WalkLocationManager()
+    @State private var mapPosition: MapCameraPosition = .userLocation(fallback: .automatic)
 
     var body: some View {
         ZStack(alignment: .top) {
-            // Full-screen map
-            Map(interactionModes: []) {
+            // Full-screen map centered on user
+            Map(position: $mapPosition) {
                 UserAnnotation()
             }
             .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
             .mapControlVisibility(.hidden)
             .ignoresSafeArea()
+            .onAppear {
+                locationManager.startTracking()
+            }
+            .onDisappear {
+                locationManager.stopTracking()
+            }
 
             // Top overlay — elapsed time badge
             VStack(spacing: 4) {
