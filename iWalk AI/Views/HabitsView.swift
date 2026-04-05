@@ -24,8 +24,9 @@ struct HabitsView: View {
                                     .foregroundStyle(Color.iwOnSurface)
                                     .scaleEffect(vm.streakAnimated ? 1.0 : 0.8)
                                     .opacity(vm.streakAnimated ? 1 : 0)
-                                Text("🔥")
+                                Image(systemName: "flame.fill")
                                     .font(.system(size: 22))
+                                    .foregroundStyle(Color.iwTertiaryContainer)
                                     .scaleEffect(vm.streakAnimated ? 1.0 : 0.5)
                                     .opacity(vm.streakAnimated ? 1 : 0)
                             }
