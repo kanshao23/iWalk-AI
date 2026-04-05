@@ -76,7 +76,7 @@ struct TieredProgressBar: View {
     private var finalGoal: Int { goalSteps }
 
     private var ghostTargets: [GhostTarget] {
-        let minimumSteps = 1_500   // keep streak alive
+        let minimumSteps = 3_000   // keep streak alive
         let goodSteps = 6_500      // Tier 3 — solid daily activity
 
         return [
@@ -113,11 +113,11 @@ struct TieredProgressBar: View {
                             // Dashed outline figure (same size as walker)
                             Image(systemName: "figure.walk")
                                 .font(.system(size: 128, weight: .medium))
-                                .foregroundStyle(target.color.opacity(target.reached ? 0.3 : 0.15))
+                                .foregroundStyle(target.color.opacity(target.reached ? 0.2 : 0.06))
                                 .overlay(
                                     Image(systemName: "figure.walk")
                                         .font(.system(size: 128, weight: .medium))
-                                        .foregroundStyle(target.color.opacity(target.reached ? 0.5 : 0.3))
+                                        .foregroundStyle(target.color.opacity(target.reached ? 0.3 : 0.15))
                                         .mask(DashedMask())
                                 )
 
@@ -236,7 +236,7 @@ struct TieredProgressBar: View {
             HStack(spacing: 14) {
                 HStack(spacing: 3) {
                     Circle().fill(Color.iwTertiary).frame(width: 8, height: 8)
-                    Text("Min: 1.5k")
+                    Text("Min: 3k")
                         .font(IWFont.labelSmall())
                         .foregroundStyle(Color.iwTertiary)
                 }
