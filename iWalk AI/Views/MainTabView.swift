@@ -24,6 +24,13 @@ struct MainTabView: View {
 
             GlassTabBar(selectedTab: $selectedTab)
         }
+        .overlay(alignment: .top) {
+            if let toast = ToastQueue.shared.current {
+                CoinToast(amount: toast.amount, source: toast.source)
+                    .padding(.top, 60)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
         .background(Color.iwSurface)
         .ignoresSafeArea(edges: .bottom)
     }

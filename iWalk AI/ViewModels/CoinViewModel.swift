@@ -65,13 +65,8 @@ final class CoinViewModel {
 
         lastEarnedAmount = amount
         lastEarnedSource = source
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-            showCoinToast = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            withAnimation(.easeOut(duration: 0.3)) {
-                self?.showCoinToast = false
-            }
+        Task { @MainActor in
+            ToastQueue.shared.enqueue(amount: amount, source: source)
         }
 
         save()
