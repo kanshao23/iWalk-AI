@@ -31,30 +31,35 @@ struct DashboardView: View {
                     }
 
                     // Evening Review or Daytime Progress
-                    if vm.isEveningMode, let review = vm.eveningReview {
-                        AnimatedCard(delay: 0.1) {
-                            EveningReviewCard(review: review) {
-                                vm.claimReviewCoins(coinVM: coinVM)
-                                vm.showEveningDetails = true
+                    Group {
+                        if vm.isEveningMode, let review = vm.eveningReview {
+                            AnimatedCard(delay: 0.1) {
+                                EveningReviewCard(review: review) {
+                                    vm.claimReviewCoins(coinVM: coinVM)
+                                    vm.showEveningDetails = true
+                                }
                             }
-                        }
-                    } else {
-                        // Tiered Progress Bar
-                        AnimatedCard(delay: 0.1) {
-                            TieredProgressBar(
-                                currentSteps: vm.animatedSteps,
-                                goalSteps: vm.stepGoal,
-                                tiers: coinVM.todayTiers,
-                                personalGoal: coinVM.personalGoal,
-                                animatedProgress: vm.animatedProgress
-                            )
-                        }
+                            .transition(.opacity)
+                        } else {
+                            // Tiered Progress Bar
+                            AnimatedCard(delay: 0.1) {
+                                TieredProgressBar(
+                                    currentSteps: vm.animatedSteps,
+                                    goalSteps: vm.stepGoal,
+                                    tiers: coinVM.todayTiers,
+                                    personalGoal: coinVM.personalGoal,
+                                    animatedProgress: vm.animatedProgress
+                                )
+                            }
 
-                        // Start Walking Button
-                        PillButton("Start Walking Now", icon: "figure.walk") {
-                            vm.startWalking()
+                            // Start Walking Button
+                            PillButton("Start Walking Now", icon: "figure.walk") {
+                                vm.startWalking()
+                            }
+                            .transition(.opacity)
                         }
                     }
+                    .animation(.easeInOut(duration: 0.4), value: vm.isEveningMode)
 
                     // Journey Card
                     if let journey = journeyVM.activeJourney {
