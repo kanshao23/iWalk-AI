@@ -60,7 +60,7 @@ enum WalkMilestone: CaseIterable {
     }
 }
 
-struct WalkSession: Equatable {
+struct WalkSession: Codable, Equatable {
     let id = UUID()
     let startTime: Date
     var endTime: Date?
@@ -472,16 +472,23 @@ struct PersonalRecord {
 
 // MARK: - AI Coach
 
-enum MessageRole {
+enum MessageRole: String, Codable {
     case user
     case assistant
 }
 
-struct CoachMessage: Identifiable {
-    let id = UUID()
+struct CoachMessage: Identifiable, Codable, Equatable {
+    let id: UUID
     let role: MessageRole
     let content: String
     let timestamp: Date
+
+    init(id: UUID = UUID(), role: MessageRole, content: String, timestamp: Date) {
+        self.id = id
+        self.role = role
+        self.content = content
+        self.timestamp = timestamp
+    }
 
     static func userMessage(_ content: String) -> CoachMessage {
         CoachMessage(role: .user, content: content, timestamp: .now)

@@ -232,6 +232,7 @@ final class ActiveWalkViewModel {
             stepsBeforeWalk: stepsBeforeWalk,
             averageHeartRate: currentHeartRate
         )
+        ActiveWalkViewModel.saveSession(session)
         withAnimation(.easeInOut(duration: 0.4)) {
             phase = .summary(session)
         }
@@ -269,5 +270,28 @@ final class ActiveWalkViewModel {
         if usesRealPedometer {
             pedometer.stopUpdates()
         }
+    }
+
+    // MARK: - History Persistence
+
+    private static let historyKey = "iw_walk_history"
+
+    static func saveSession(_ session: WalkSession) {
+        var history = loadHistory()
+        history.insert(session, at: 0)
+        if history.count > 365 {
+            history = Array(history.prefix(365))
+        }
+        if let data = try? JSONEncoder().encode(history) {
+            UserDefaults.standard.set(data, forKey: historyKey)
+        }
+    }
+
+    static func loadHistory() -> [WalkSession] {
+        guard let data = UserDefaults.standard.data(forKey: historyKey),
+              let history = try? JSONDecoder().decode([WalkSession].self, from: data) else {
+            return []
+        }
+        return history
     }
 }
