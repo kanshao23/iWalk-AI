@@ -74,6 +74,17 @@ final class JourneyViewModel {
         JourneyTemplate.allCases.filter { !completedJourneys.contains($0.rawValue) }
     }
 
+    func resetAllData() {
+        activeJourney = JourneyTemplate.nyToLA.createJourney()
+        completedJourneys = []
+        todayDistanceKm = 0
+        showMilestonePopup = false
+        reachedMilestone = nil
+        showJourneySelection = false
+        saveJourney()
+        saveCompleted()
+    }
+
     private func saveJourney() {
         if let journey = activeJourney,
            let data = try? JSONEncoder().encode(journey) {

@@ -34,7 +34,7 @@ struct BadgesView: View {
                     InfoCard(backgroundColor: .iwSurfaceContainerLow) {
                         VStack(alignment: .leading, spacing: 14) {
                             HStack {
-                                Text("本周 vs 上周")
+                                Text("This Week vs Last Week")
                                     .font(IWFont.titleMedium())
                                     .foregroundStyle(Color.iwOnSurface)
                                 Spacer()
@@ -48,7 +48,7 @@ struct BadgesView: View {
                                     Text(vm.thisWeekAvg.formatted())
                                         .font(IWFont.labelLarge())
                                         .foregroundStyle(Color.iwPrimary)
-                                    Text("本周均")
+                                    Text("This Week")
                                         .font(IWFont.labelSmall())
                                         .foregroundStyle(Color.iwOutline)
                                 }
@@ -60,7 +60,7 @@ struct BadgesView: View {
                                     Text(vm.lastWeekAvg.formatted())
                                         .font(IWFont.labelLarge())
                                         .foregroundStyle(Color.iwOutline)
-                                    Text("上周均")
+                                    Text("Last Week")
                                         .font(IWFont.labelSmall())
                                         .foregroundStyle(Color.iwOutline)
                                 }

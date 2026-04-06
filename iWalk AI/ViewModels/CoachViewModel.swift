@@ -279,35 +279,35 @@ final class CoachViewModel {
 
         // Suggestion 1: progress-based
         if progressPct >= 1.0 {
-            newSuggestions.append(CoachSuggestion(text: "目标达成！今天成绩怎么样？", aiResponse: ""))
+            newSuggestions.append(CoachSuggestion(text: "Goal reached! How do I keep momentum?", aiResponse: ""))
         } else if progressPct < 0.3 && hour >= 14 {
-            newSuggestions.append(CoachSuggestion(text: "现在出门走 20 分钟？", aiResponse: ""))
+            newSuggestions.append(CoachSuggestion(text: "Go for a 20-minute walk now?", aiResponse: ""))
         } else {
             newSuggestions.append(CoachSuggestion(
-                text: "还差 \(stepsRemaining.formatted()) 步达标，怎么加？", aiResponse: ""))
+                text: "\(stepsRemaining.formatted()) steps to go — how do I close it?", aiResponse: ""))
         }
 
         // Suggestion 2: streak-based
         if streak.currentStreak >= 7 {
             newSuggestions.append(CoachSuggestion(
-                text: "连续 \(streak.currentStreak) 天了，今天冲个人记录？", aiResponse: ""))
+                text: "\(streak.currentStreak)-day streak! How do I push further?", aiResponse: ""))
         } else if streak.isAtRisk && streak.currentStreak > 0 {
             newSuggestions.append(CoachSuggestion(
-                text: "今天还差 \(streakStepsRemaining.formatted()) 步保连续", aiResponse: ""))
+                text: "\(streakStepsRemaining.formatted()) steps left to save my streak", aiResponse: ""))
         } else {
-            newSuggestions.append(CoachSuggestion(text: "如何提高步行效率？", aiResponse: ""))
+            newSuggestions.append(CoachSuggestion(text: "How do I walk more efficiently?", aiResponse: ""))
         }
 
         // Suggestion 3: time-based
         switch hour {
         case 5..<10:
-            newSuggestions.append(CoachSuggestion(text: "晨走有什么好处？", aiResponse: ""))
+            newSuggestions.append(CoachSuggestion(text: "Benefits of morning walks?", aiResponse: ""))
         case 12..<14:
-            newSuggestions.append(CoachSuggestion(text: "午饭后散步多久合适？", aiResponse: ""))
+            newSuggestions.append(CoachSuggestion(text: "How long should I walk after lunch?", aiResponse: ""))
         case 20..<23:
-            newSuggestions.append(CoachSuggestion(text: "睡前散步会影响睡眠吗？", aiResponse: ""))
+            newSuggestions.append(CoachSuggestion(text: "Does walking before bed affect sleep?", aiResponse: ""))
         default:
-            newSuggestions.append(CoachSuggestion(text: "今天感觉怎么样？", aiResponse: ""))
+            newSuggestions.append(CoachSuggestion(text: "How am I doing today?", aiResponse: ""))
         }
 
         suggestions = newSuggestions

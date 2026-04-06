@@ -108,6 +108,62 @@ struct AIInsightsView: View {
                     .id("focus-\(vm.selectedCategory)")
                 }
 
+                // Coach Recommendations (moved from Coach tab)
+                AnimatedCard(delay: 0.15) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        SectionHeader("Coach Recommendations")
+
+                        VStack(spacing: 12) {
+                            ForEach(vm.coachRecommendations) { recommendation in
+                                InfoCard(backgroundColor: recommendation.backgroundColor.opacity(0.2)) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack {
+                                            Image(systemName: recommendation.icon)
+                                                .foregroundStyle(recommendation.iconColor)
+                                            Text(recommendation.title)
+                                                .font(IWFont.titleMedium())
+                                                .foregroundStyle(Color.iwOnSurface)
+                                            Spacer()
+                                            Image(systemName: vm.expandedCoachRecommendationId == recommendation.id ? "chevron.up" : "chevron.down")
+                                                .font(.system(size: 12))
+                                                .foregroundStyle(Color.iwOutline)
+                                        }
+                                        Text(recommendation.description)
+                                            .font(IWFont.bodyMedium())
+                                            .foregroundStyle(Color.iwOutline)
+
+                                        if vm.expandedCoachRecommendationId == recommendation.id {
+                                            Divider()
+                                            Text(recommendation.detailedInfo)
+                                                .font(IWFont.bodyMedium())
+                                                .foregroundStyle(Color.iwOnSurfaceVariant)
+                                                .transition(.opacity.combined(with: .move(edge: .top)))
+                                        }
+                                    }
+                                }
+                                .contentShape(Rectangle())
+                                .onTapGesture { vm.toggleCoachRecommendation(recommendation) }
+                            }
+                        }
+
+                        InfoCard(backgroundColor: .iwSurfaceContainerLow) {
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: "leaf.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(Color.iwPrimary)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(vm.natureTipTitle)
+                                        .font(IWFont.labelMedium())
+                                        .foregroundStyle(Color.iwPrimary)
+                                    Text(vm.natureTipDescription)
+                                        .font(IWFont.bodyMedium())
+                                        .foregroundStyle(Color.iwOutline)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Peak Hours
                 AnimatedCard(delay: 0.2) {
                     VStack(alignment: .leading, spacing: 16) {

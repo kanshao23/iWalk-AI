@@ -1,14 +1,16 @@
 import SwiftUI
+import UIKit
 
 struct AICoachView: View {
     @State private var vm = CoachViewModel()
+    @State private var keyboardHeight: CGFloat = 0
     @Environment(\.streakVM) private var streakVM
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 28) {
-                    AppHeader()
+                    AppHeader(showSettings: false)
 
                     // Profile Greeting
                     AnimatedCard(delay: 0.1) {
@@ -24,7 +26,7 @@ struct AICoachView: View {
                             Text("Hello, \(vm.user.name)")
                                 .font(IWFont.headlineMedium())
                                 .foregroundStyle(Color.iwOnSurface)
-                            Text("I've analyzed your recent activity.")
+                            Text(vm.analysisSubtitle)
                                 .font(IWFont.bodyMedium())
                                 .foregroundStyle(Color.iwOutline)
                         }
@@ -70,74 +72,20 @@ struct AICoachView: View {
                         }
                     }
 
-                    // Recommendation Cards
-                    AnimatedCard(delay: 0.3) {
-                        VStack(spacing: 14) {
-                            ForEach(vm.recommendations) { rec in
-                                InfoCard(backgroundColor: rec.backgroundColor.opacity(0.3)) {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        HStack {
-                                            Image(systemName: rec.icon)
-                                                .foregroundStyle(rec.iconColor)
-                                            Text(rec.title)
-                                                .font(IWFont.titleMedium())
-                                                .foregroundStyle(Color.iwOnSurface)
-                                            Spacer()
-                                            Image(systemName: vm.expandedRecommendationId == rec.id ? "chevron.up" : "chevron.down")
-                                                .font(.system(size: 12))
-                                                .foregroundStyle(Color.iwOutline)
-                                        }
-                                        Text(rec.description)
-                                            .font(IWFont.bodyMedium())
-                                            .foregroundStyle(Color.iwOutline)
-
-                                        if vm.expandedRecommendationId == rec.id {
-                                            Divider()
-                                            Text(rec.detailedInfo)
-                                                .font(IWFont.bodyMedium())
-                                                .foregroundStyle(Color.iwOnSurfaceVariant)
-                                                .transition(.opacity.combined(with: .move(edge: .top)))
-                                        }
-                                    }
-                                }
-                                .contentShape(Rectangle())
-                                .onTapGesture { vm.toggleRecommendation(rec) }
-                            }
-                        }
-                    }
-
-                    // Chat Section
-                    if !vm.showChat {
-                        // Suggestion Chips
-                        AnimatedCard(delay: 0.4) {
-                            VStack(alignment: .leading, spacing: 14) {
-                                Text("Ask about walking benefits")
-                                    .font(IWFont.titleMedium())
-                                    .foregroundStyle(Color.iwOnSurface)
-
-                                VStack(spacing: 10) {
-                                    ForEach(vm.suggestions) { suggestion in
-                                        Button {
-                                            vm.sendSuggestion(suggestion)
-                                        } label: {
-                                            HStack(spacing: 10) {
-                                                Image(systemName: "bubble.left.fill")
-                                                    .font(.system(size: 14))
-                                                    .foregroundStyle(Color.iwPrimary)
-                                                Text(suggestion.text)
-                                                    .font(IWFont.bodyMedium())
-                                                    .foregroundStyle(Color.iwOnSurfaceVariant)
-                                                    .lineLimit(1)
-                                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                                Image(systemName: "chevron.right")
-                                                    .font(.system(size: 12))
-                                                    .foregroundStyle(Color.iwOutline)
-                                            }
-                                            .padding(14)
-                                            .background(Color.iwSurfaceContainerLowest)
-                                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                                        }
-                                    }
+                    // Redirect explanatory content to Insights
+                    AnimatedCard(delay: 0.28) {
+                        InfoCard(backgroundColor: .iwSurfaceContainerLowest) {
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: "chart.line.uptrend.xyaxis")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(Color.iwPrimary)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Need deeper analysis?")
+                                        .font(IWFont.labelMedium())
+                                        .foregroundStyle(Color.iwPrimary)
+                                    Text("Open Insights for detailed trends, recommendations, and context behind each suggestion.")
+                                        .font(IWFont.bodyMedium())
+                                        .foregroundStyle(Color.iwOutline)
                                 }
                             }
                         }
@@ -173,54 +121,14 @@ struct AICoachView: View {
                                 .background(Color.iwSurfaceContainerLow)
                                 .clipShape(RoundedRectangle(cornerRadius: 16))
                             }
-
-                            // Quick suggestions after chat starts
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(vm.suggestions) { suggestion in
-                                        Button {
-                                            vm.sendSuggestion(suggestion)
-                                        } label: {
-                                            Text(suggestion.text)
-                                                .font(IWFont.labelMedium())
-                                                .foregroundStyle(Color.iwPrimary)
-                                                .lineLimit(1)
-                                                .padding(.horizontal, 14)
-                                                .padding(.vertical, 8)
-                                                .background(Color.iwPrimaryFixed.opacity(0.15))
-                                                .clipShape(Capsule())
-                                        }
-                                    }
-                                }
-                            }
                         }
                         .id("chatBottom")
                     }
 
-                    // Nature Insight Card
-                    AnimatedCard(delay: vm.showChat ? 0 : 0.5) {
-                        InfoCard(backgroundColor: .iwPrimary) {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Image(systemName: "leaf.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundStyle(.white.opacity(0.8))
-                                Text("Walking in nature reduces stress by 40% more effectively than urban walking.")
-                                    .font(IWFont.titleMedium())
-                                    .foregroundStyle(.white)
-                                Text("Consider finding a nearby park or trail for your next walk.")
-                                    .font(IWFont.bodyMedium())
-                                    .foregroundStyle(.white.opacity(0.8))
-                            }
-                        }
-                    }
-
-                    // Chat Input
-                    if vm.showChat {
-                        Spacer().frame(height: 10)
-                    }
+                    Spacer().frame(height: 10)
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, vm.showChat ? 80 : 100)
+                .padding(.bottom, 100)
             }
             .onChange(of: vm.messages.count) {
                 withAnimation {
@@ -229,13 +137,45 @@ struct AICoachView: View {
             }
         }
         .background(Color.iwSurface)
-        .overlay(alignment: .bottom) {
-            if vm.showChat {
-                ChatInputBar(text: $vm.inputText) {
-                    vm.sendMessage(vm.inputText)
-                }
-                .padding(.bottom, 90)
+        .task {
+            await vm.refreshContext(streak: streakVM.streak)
+        }
+        .onChange(of: streakVM.streak) { _, newStreak in
+            Task {
+                await vm.refreshContext(streak: newStreak)
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            Task {
+                await vm.refreshContext(streak: streakVM.streak)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
+            updateKeyboardHeight(from: notification)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            withAnimation(.easeOut(duration: 0.25)) {
+                keyboardHeight = 0
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            ChatInputBar(
+                text: $vm.inputText,
+                suggestions: vm.suggestions,
+                onSuggestionTap: vm.sendSuggestion
+            ) {
+                vm.sendMessage(vm.inputText)
+            }
+            .padding(.bottom, keyboardHeight > 0 ? 0 : 74)
+        }
+    }
+
+    private func updateKeyboardHeight(from notification: Notification) {
+        guard let endFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+        let screenHeight = UIScreen.main.bounds.height
+        let overlap = max(0, screenHeight - endFrame.minY)
+        withAnimation(.easeOut(duration: 0.25)) {
+            keyboardHeight = overlap
         }
     }
 }
@@ -266,26 +206,58 @@ private struct ChatBubble: View {
 
 private struct ChatInputBar: View {
     @Binding var text: String
+    let suggestions: [CoachSuggestion]
+    let onSuggestionTap: (CoachSuggestion) -> Void
     let onSend: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            TextField("Ask your AI coach...", text: $text)
-                .font(IWFont.bodyMedium())
-                .padding(12)
-                .background(Color.iwSurfaceContainerLowest)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .onSubmit { onSend() }
-
-            Button(action: onSend) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 32))
-                    .foregroundStyle(text.trimmingCharacters(in: .whitespaces).isEmpty ? Color.iwOutline : Color.iwPrimary)
+        VStack(spacing: 10) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(suggestions) { suggestion in
+                        Button {
+                            onSuggestionTap(suggestion)
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "sparkles")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(Color.iwPrimary)
+                                Text(suggestion.text)
+                                    .font(IWFont.labelMedium())
+                                    .foregroundStyle(Color.iwOnSurfaceVariant)
+                                    .lineLimit(1)
+                                    .fixedSize(horizontal: true, vertical: false)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.iwSurfaceContainerLowest)
+                            .clipShape(Capsule())
+                        }
+                    }
+                }
             }
-            .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
+
+            HStack(alignment: .bottom, spacing: 10) {
+                TextField("Ask your coach anything...", text: $text, axis: .vertical)
+                    .lineLimit(1...4)
+                    .font(IWFont.bodyMedium())
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
+                    .background(Color.iwSurfaceContainerLowest)
+                    .clipShape(RoundedRectangle(cornerRadius: 22))
+                    .onSubmit { onSend() }
+
+                Button(action: onSend) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 36))
+                        .foregroundStyle(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.iwOutline : Color.iwPrimary)
+                }
+                .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 8)
+        .padding(.top, 8)
+        .padding(.bottom, 10)
         .background(.ultraThinMaterial)
     }
 }

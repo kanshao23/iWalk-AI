@@ -28,5 +28,10 @@ struct PersonalGoal: Codable {
         return PersonalGoal(targetSteps: target, coinReward: 10, isReached: false)
     }
 
+    static func from(target: Int) -> PersonalGoal {
+        let clamped = min(max(target, 3_000), 30_000)
+        return PersonalGoal(targetSteps: clamped, coinReward: 10, isReached: false)
+    }
+
     static let mock = PersonalGoal(targetSteps: 9_350, coinReward: 10, isReached: false)
 }

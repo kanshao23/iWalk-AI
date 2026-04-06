@@ -8,7 +8,7 @@ struct HabitsView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 28) {
-                AppHeader(showProfile: true)
+                AppHeader(showProfile: true, showSettings: false)
 
                 // Current Progress — Streak
                 AnimatedCard(delay: 0.1) {

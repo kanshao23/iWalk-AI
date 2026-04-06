@@ -32,9 +32,9 @@ final class BadgesViewModel {
 
     var comparisonMessage: String {
         let pct = weekOverWeekPercent
-        if pct > 0 { return "比上周多走了 \(pct)%，保持！" }
-        else if pct < 0 { return "比上周少了 \(abs(pct))%，今天发力！" }
-        else { return "与上周持平，继续加油！" }
+        if pct > 0 { return "\(pct)% more than last week — keep it up!" }
+        else if pct < 0 { return "\(abs(pct))% less than last week — push today!" }
+        else { return "Same as last week — stay consistent!" }
     }
 
     @MainActor

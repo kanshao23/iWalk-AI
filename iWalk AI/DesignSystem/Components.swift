@@ -407,9 +407,17 @@ struct SectionHeader: View {
 
 struct AppHeader: View {
     let showProfile: Bool
+    let showSettings: Bool
+    let onSettingsTap: (() -> Void)?
 
-    init(showProfile: Bool = false) {
+    init(
+        showProfile: Bool = false,
+        showSettings: Bool = true,
+        onSettingsTap: (() -> Void)? = nil
+    ) {
         self.showProfile = showProfile
+        self.showSettings = showSettings
+        self.onSettingsTap = onSettingsTap
     }
 
     var body: some View {
@@ -438,12 +446,14 @@ struct AppHeader: View {
                             .foregroundStyle(Color.iwOutline)
                     )
             }
-            Button(action: {}) {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 20))
-                    .foregroundStyle(Color.iwOnSurfaceVariant)
+            if showSettings {
+                Button(action: { onSettingsTap?() }) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Color.iwOnSurfaceVariant)
+                }
+                .accessibilityLabel("Settings")
             }
-            .accessibilityLabel("Settings")
         }
     }
 }
