@@ -1,6 +1,10 @@
 import SwiftUI
 import CoreMotion
 
+extension Notification.Name {
+    static let walkDidEnd = Notification.Name("iw_walkDidEnd")
+}
+
 @Observable
 final class ActiveWalkViewModel {
     // Phase state machine
@@ -216,6 +220,7 @@ final class ActiveWalkViewModel {
 
     func endWalk() {
         invalidateAll()
+        NotificationCenter.default.post(name: .walkDidEnd, object: nil)
         let session = WalkSession(
             startTime: startTime,
             endTime: .now,

@@ -57,6 +57,7 @@ final class DashboardViewModel {
 
     private let healthKit = HealthKitManager.shared
     private var refreshTimer: Timer?
+    private var walkEndObserver: NSObjectProtocol?
 
     // MARK: - Auto Refresh (every 30s + foreground)
 
@@ -67,9 +68,23 @@ final class DashboardViewModel {
         }
     }
 
+    func setupNotifications(coinVM: CoinViewModel, streakVM: StreakViewModel) {
+        walkEndObserver = NotificationCenter.default.addObserver(
+            forName: .walkDidEnd,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.refreshFromHealthKit(coinVM: coinVM, streakVM: streakVM)
+        }
+    }
+
     func stopAutoRefresh() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+        if let obs = walkEndObserver {
+            NotificationCenter.default.removeObserver(obs)
+            walkEndObserver = nil
+        }
     }
 
     func refreshFromHealthKit(coinVM: CoinViewModel, streakVM: StreakViewModel) {

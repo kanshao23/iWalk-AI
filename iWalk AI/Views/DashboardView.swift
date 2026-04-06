@@ -162,6 +162,7 @@ struct DashboardView: View {
             }
             vm.generateEveningReview(coinVM: coinVM, streakVM: streakVM, journeyVM: journeyVM)
             vm.startAutoRefresh(coinVM: coinVM, streakVM: streakVM)
+            vm.setupNotifications(coinVM: coinVM, streakVM: streakVM)
         }
         .onDisappear {
             vm.stopAutoRefresh()
