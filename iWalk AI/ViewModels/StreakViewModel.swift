@@ -54,6 +54,18 @@ final class StreakViewModel {
         save()
     }
 
+    func addFreezeCard() {
+        streak.freezeCardsRemaining += 1
+        save()
+    }
+
+    func resetAllData() {
+        streak = .empty
+        showMilestoneToast = false
+        reachedMilestone = nil
+        save()
+    }
+
     private func save() {
         if let data = try? JSONEncoder().encode(streak) {
             UserDefaults.standard.set(data, forKey: storageKey)

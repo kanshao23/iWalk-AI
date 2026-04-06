@@ -1,12 +1,33 @@
 import SwiftUI
+import UIKit
 
 struct BadgesView: View {
+    @Environment(\.coinVM) private var coinVM
+    @Environment(\.streakVM) private var streakVM
     @State private var vm = BadgesViewModel()
+    @State private var showSettingsSheet = false
+    @State private var showCoinShop = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 28) {
-                AppHeader()
+                AppHeader(onSettingsTap: {
+                    showSettingsSheet = true
+                })
+
+                HStack {
+                    Spacer()
+                    Button {
+                        showCoinShop = true
+                    } label: {
+                        Image(systemName: "storefront.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(Color.iwPrimary)
+                            .frame(width: 32, height: 32)
+                            .background(Color.iwPrimaryContainer)
+                            .clipShape(Circle())
+                    }
+                }
 
                 // Leaderboard
                 AnimatedCard(delay: 0.1) {
@@ -88,6 +109,217 @@ struct BadgesView: View {
         }
         .sheet(item: $vm.selectedBadge) { badge in
             BadgeDetailSheet(badge: badge)
+        }
+        .sheet(isPresented: $showSettingsSheet) {
+            AppSettingsSheet()
+        }
+        .sheet(isPresented: $showCoinShop) {
+            CoinShopView(coinVM: coinVM, streakVM: streakVM)
+        }
+    }
+}
+
+private struct AppSettingsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    @Environment(\.coinVM) private var coinVM
+    @Environment(\.streakVM) private var streakVM
+    @Environment(\.journeyVM) private var journeyVM
+
+    @AppStorage("hasSubscribed") private var hasSubscribed = false
+    @AppStorage("iw_daily_reminder_enabled") private var dailyReminderEnabled = true
+    @AppStorage("iw_streak_risk_reminder_enabled") private var streakRiskReminderEnabled = true
+    @AppStorage("iw_evening_review_reminder_enabled") private var eveningReviewReminderEnabled = false
+    @AppStorage("iw_daily_reminder_hour") private var reminderHour = 20
+    @AppStorage("iw_daily_reminder_minute") private var reminderMinute = 0
+
+    @State private var personalGoalSteps = 10_000
+    @State private var isRequestingHealthAccess = false
+    @State private var showResetConfirm = false
+    @State private var actionFeedback: String?
+
+    private let healthKit = HealthKitManager.shared
+
+    private var reminderDateBinding: Binding<Date> {
+        Binding<Date>(
+            get: {
+                var components = DateComponents()
+                components.hour = reminderHour
+                components.minute = reminderMinute
+                return Calendar.current.date(from: components) ?? .now
+            },
+            set: { newValue in
+                reminderHour = Calendar.current.component(.hour, from: newValue)
+                reminderMinute = Calendar.current.component(.minute, from: newValue)
+            }
+        )
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if let actionFeedback {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(Color.iwPrimary)
+                        Text(actionFeedback)
+                            .font(IWFont.labelMedium())
+                            .foregroundStyle(Color.iwOnSurface)
+                    }
+                    .listRowBackground(Color.iwPrimaryFixed.opacity(0.2))
+                }
+
+                Section("Subscription") {
+                    HStack {
+                        Text("Plan status")
+                        Spacer()
+                        Text(hasSubscribed ? "Active" : "Free")
+                            .foregroundStyle(hasSubscribed ? Color.iwPrimary : Color.iwOutline)
+                    }
+                    Button {
+                        guard let url = URL(string: "https://apps.apple.com/account/subscriptions") else { return }
+                        openURL(url)
+                    } label: {
+                        Label("Manage Subscription", systemImage: "creditcard")
+                    }
+                }
+
+                Section("Goals") {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Personal Step Goal")
+                            Spacer()
+                            Text("\(personalGoalSteps.formatted())")
+                                .foregroundStyle(Color.iwPrimary)
+                        }
+                        Stepper(value: $personalGoalSteps, in: 3_000...30_000, step: 250) {}
+                            .labelsHidden()
+                    }
+                    .onChange(of: personalGoalSteps) { _, newValue in
+                        coinVM.setPersonalGoal(targetSteps: newValue)
+                    }
+
+                    HStack {
+                        Text("Reward per goal")
+                        Spacer()
+                        Text("+\(coinVM.personalGoal.coinReward) coins")
+                            .foregroundStyle(Color.iwOutline)
+                    }
+                }
+
+                Section("Reminders") {
+                    Toggle("Daily walk reminder", isOn: $dailyReminderEnabled)
+                    Toggle("Streak risk reminder", isOn: $streakRiskReminderEnabled)
+                    Toggle("Evening review reminder", isOn: $eveningReviewReminderEnabled)
+
+                    if dailyReminderEnabled {
+                        DatePicker(
+                            "Reminder time",
+                            selection: reminderDateBinding,
+                            displayedComponents: .hourAndMinute
+                        )
+                    }
+                }
+
+                Section("Health Data") {
+                    HStack {
+                        Text("HealthKit access")
+                        Spacer()
+                        Text(healthKit.isAuthorized ? "Connected" : "Not connected")
+                            .foregroundStyle(healthKit.isAuthorized ? Color.iwPrimary : Color.iwOutline)
+                    }
+
+                    if !healthKit.isAuthorized {
+                        Button {
+                            requestHealthKitAccess()
+                        } label: {
+                            Label("Connect HealthKit", systemImage: "heart.text.square")
+                        }
+                        .disabled(isRequestingHealthAccess)
+                    }
+
+                    Button {
+                        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                        openURL(url)
+                    } label: {
+                        Label("Open iOS Settings", systemImage: "gear")
+                    }
+                }
+
+                Section("Data Management") {
+                    Button {
+                        UserDefaults.standard.removeObject(forKey: "iw_coach_messages_v1")
+                        actionFeedback = "Coach conversation history cleared."
+                    } label: {
+                        Label("Clear Coach History", systemImage: "trash")
+                    }
+
+                    Button(role: .destructive) {
+                        showResetConfirm = true
+                    } label: {
+                        Label("Reset Progress Data", systemImage: "exclamationmark.triangle")
+                    }
+                }
+
+                Section("About") {
+                    HStack {
+                        Text("App")
+                        Spacer()
+                        Text("iWalk AI")
+                            .foregroundStyle(Color.iwOutline)
+                    }
+                    HStack {
+                        Text("Build")
+                        Spacer()
+                        Text("Beta")
+                            .foregroundStyle(Color.iwOutline)
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(Color.iwSurface)
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(Color.iwPrimary)
+                }
+            }
+            .confirmationDialog(
+                "Reset all local progress data?",
+                isPresented: $showResetConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Reset", role: .destructive) {
+                    coinVM.resetAllData()
+                    streakVM.resetAllData()
+                    journeyVM.resetAllData()
+                    UserDefaults.standard.removeObject(forKey: "iw_coach_messages_v1")
+                    actionFeedback = "Local progress reset completed."
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This clears coins, streak, journey progress, and coach history on this device.")
+            }
+            .onAppear {
+                personalGoalSteps = coinVM.personalGoal.targetSteps
+            }
+        }
+    }
+
+    private func requestHealthKitAccess() {
+        guard !isRequestingHealthAccess else { return }
+        isRequestingHealthAccess = true
+        Task {
+            _ = await healthKit.requestAuthorization()
+            await MainActor.run {
+                isRequestingHealthAccess = false
+                actionFeedback = healthKit.isAuthorized
+                ? "HealthKit connected successfully."
+                : "HealthKit authorization was not granted."
+            }
         }
     }
 }

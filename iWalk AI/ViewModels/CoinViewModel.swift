@@ -83,6 +83,34 @@ final class CoinViewModel {
         return true
     }
 
+    // MARK: - Shop
+
+    private let unlockedThemesKey = "iw_unlocked_themes"
+
+    var unlockedThemes: Set<String> {
+        get {
+            let saved = UserDefaults.standard.stringArray(forKey: unlockedThemesKey) ?? []
+            return Set(saved)
+        }
+        set {
+            UserDefaults.standard.set(Array(newValue), forKey: unlockedThemesKey)
+        }
+    }
+
+    func unlockTheme(_ themeId: String, streakVM: StreakViewModel) -> Bool {
+        if themeId == "freeze_card" {
+            guard spend(amount: 20, description: "Purchased freeze card") else { return false }
+            streakVM.addFreezeCard()
+            return true
+        }
+        guard !unlockedThemes.contains(themeId) else { return false }
+        guard spend(amount: 50, description: "Unlocked journey theme: \(themeId)") else { return false }
+        var themes = unlockedThemes
+        themes.insert(themeId)
+        unlockedThemes = themes
+        return true
+    }
+
     // MARK: - Step Tier Checks
 
     @discardableResult
