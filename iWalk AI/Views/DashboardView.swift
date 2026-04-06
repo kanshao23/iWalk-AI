@@ -70,13 +70,13 @@ struct DashboardView: View {
                         HStack(spacing: 0) {
                             StatCard(
                                 icon: "flame.fill",
-                                value: "\(vm.todayStats.calories)",
+                                value: "\(vm.isCaloriesEstimated ? "~" : "")\(vm.todayStats.calories)",
                                 label: "kcal",
                                 iconColor: .iwTertiaryContainer
                             )
                             StatCard(
                                 icon: "mappin.and.ellipse",
-                                value: String(format: "%.1f", vm.todayStats.distanceKm),
+                                value: "\(vm.isDistanceEstimated ? "~" : "")\(String(format: "%.1f", vm.todayStats.distanceKm))",
                                 label: "km",
                                 iconColor: .iwSecondary
                             )

@@ -6,6 +6,8 @@ final class DashboardViewModel {
     var todayStats = DailyStats(date: .now, steps: 0, calories: 0, distanceKm: 0, activeMinutes: 0, heartRate: nil)
     var weeklyActivity = DailyStats.mockWeek
     var hasLoadedRealData = false
+    var isDistanceEstimated = true
+    var isCaloriesEstimated = true
     var healthTips = HealthTip.mockTips
     var currentTipIndex = 0
 
@@ -79,8 +81,20 @@ final class DashboardViewModel {
 
             await MainActor.run {
                 todayStats.steps = steps
-                todayStats.distanceKm = distance > 0 ? distance : Double(steps) / 1400.0
-                todayStats.calories = calories > 0 ? calories : steps / 20
+                if distance > 0 {
+                    todayStats.distanceKm = distance
+                    isDistanceEstimated = false
+                } else {
+                    todayStats.distanceKm = Double(steps) / 1400.0
+                    isDistanceEstimated = true
+                }
+                if calories > 0 {
+                    todayStats.calories = calories
+                    isCaloriesEstimated = false
+                } else {
+                    todayStats.calories = steps / 20
+                    isCaloriesEstimated = true
+                }
                 todayStats.activeMinutes = steps / 200
 
                 withAnimation(.easeOut(duration: 0.3)) {
@@ -120,8 +134,20 @@ final class DashboardViewModel {
         await MainActor.run {
             hasLoadedRealData = true
             todayStats.steps = steps
-            todayStats.distanceKm = distance > 0 ? distance : Double(steps) / 1400.0
-            todayStats.calories = calories > 0 ? calories : steps / 20
+            if distance > 0 {
+                todayStats.distanceKm = distance
+                isDistanceEstimated = false
+            } else {
+                todayStats.distanceKm = Double(steps) / 1400.0
+                isDistanceEstimated = true
+            }
+            if calories > 0 {
+                todayStats.calories = calories
+                isCaloriesEstimated = false
+            } else {
+                todayStats.calories = steps / 20
+                isCaloriesEstimated = true
+            }
             todayStats.activeMinutes = steps / 200
             if !weekly.isEmpty {
                 weeklyActivity = weekly
