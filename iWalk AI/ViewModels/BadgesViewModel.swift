@@ -4,19 +4,50 @@ import SwiftUI
 final class BadgesViewModel {
     var badges = Badge.mockBadges
     var challenges = Challenge.mockChallenges
-    var leaderboard = LeaderboardEntry.mockEntries
+
+    // Local comparison data
+    var thisWeekDaily: [DailyStats] = []
+    var lastWeekDaily: [DailyStats] = []
+    var isLoadingComparison = false
 
     // UI States
-    var showLeaderboard = false
     var selectedBadge: Badge?
     var expandedChallengeId: UUID?
     var challengeAnimated: [UUID: Bool] = [:]
 
-    var userRank: LeaderboardEntry? {
-        leaderboard.first(where: \.isCurrentUser)
+    var thisWeekAvg: Int {
+        guard !thisWeekDaily.isEmpty else { return 0 }
+        return thisWeekDaily.map(\.steps).reduce(0, +) / thisWeekDaily.count
     }
 
-    var totalParticipants: Int { 25_000 }
+    var lastWeekAvg: Int {
+        guard !lastWeekDaily.isEmpty else { return 0 }
+        return lastWeekDaily.map(\.steps).reduce(0, +) / lastWeekDaily.count
+    }
+
+    var weekOverWeekPercent: Int {
+        guard lastWeekAvg > 0 else { return 0 }
+        return Int(((Double(thisWeekAvg) - Double(lastWeekAvg)) / Double(lastWeekAvg)) * 100)
+    }
+
+    var comparisonMessage: String {
+        let pct = weekOverWeekPercent
+        if pct > 0 { return "比上周多走了 \(pct)%，保持！" }
+        else if pct < 0 { return "比上周少了 \(abs(pct))%，今天发力！" }
+        else { return "与上周持平，继续加油！" }
+    }
+
+    @MainActor
+    func loadComparisonData() async {
+        let healthKit = HealthKitManager.shared
+        guard healthKit.isAuthorized else { return }
+        isLoadingComparison = true
+        async let thisWeek = healthKit.fetchWeeklySteps()
+        async let lastWeek = healthKit.fetchPreviousWeekSteps()
+        thisWeekDaily = await thisWeek
+        lastWeekDaily = await lastWeek
+        isLoadingComparison = false
+    }
 
     var unlockedBadges: [Badge] {
         badges.filter(\.isUnlocked)

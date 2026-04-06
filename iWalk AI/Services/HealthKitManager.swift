@@ -139,6 +139,44 @@ final class HealthKitManager {
         }
     }
 
+    // MARK: - Previous Week Steps (7–13 days ago)
+
+    func fetchPreviousWeekSteps() async -> [DailyStats] {
+        guard let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return [] }
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        guard let endDate = calendar.date(byAdding: .day, value: -7, to: today),
+              let startDate = calendar.date(byAdding: .day, value: -13, to: today) else { return [] }
+
+        return await withCheckedContinuation { continuation in
+            var interval = DateComponents()
+            interval.day = 1
+            let query = HKStatisticsCollectionQuery(
+                quantityType: stepType,
+                quantitySamplePredicate: HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate),
+                options: .cumulativeSum,
+                anchorDate: startDate,
+                intervalComponents: interval
+            )
+            query.initialResultsHandler = { _, results, _ in
+                var daily: [DailyStats] = []
+                results?.enumerateStatistics(from: startDate, to: endDate) { stats, _ in
+                    let steps = Int(stats.sumQuantity()?.doubleValue(for: .count()) ?? 0)
+                    daily.append(DailyStats(
+                        date: stats.startDate,
+                        steps: steps,
+                        calories: steps / 20,
+                        distanceKm: Double(steps) / 1400.0,
+                        activeMinutes: steps / 200,
+                        heartRate: nil
+                    ))
+                }
+                continuation.resume(returning: daily)
+            }
+            self.store.execute(query)
+        }
+    }
+
     // MARK: - Monthly Steps (for habits calendar)
 
     func fetchMonthlySteps(year: Int, month: Int) async -> [HabitDay] {

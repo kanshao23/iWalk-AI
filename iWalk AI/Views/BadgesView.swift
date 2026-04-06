@@ -29,37 +29,90 @@ struct BadgesView: View {
                     }
                 }
 
-                // Leaderboard
+                // Local comparison card
                 AnimatedCard(delay: 0.1) {
-                    VStack(spacing: 16) {
-                        SectionHeader("Leaderboard", trailing: "View All") {
-                            vm.showLeaderboard = true
-                        }
+                    InfoCard(backgroundColor: .iwSurfaceContainerLow) {
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack {
+                                Text("本周 vs 上周")
+                                    .font(IWFont.titleMedium())
+                                    .foregroundStyle(Color.iwOnSurface)
+                                Spacer()
+                                if vm.isLoadingComparison {
+                                    ProgressView().scaleEffect(0.8)
+                                }
+                            }
 
-                        if let rank = vm.userRank {
-                            InfoCard(backgroundColor: .iwSurfaceContainerLowest) {
-                                HStack(spacing: 14) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color.iwPrimaryFixed.opacity(0.3))
-                                            .frame(width: 52, height: 52)
-                                        Image(systemName: "trophy.fill")
-                                            .font(.system(size: 22))
-                                            .foregroundStyle(Color.iwPrimary)
-                                    }
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("YOUR RANK")
-                                            .font(IWFont.labelSmall())
-                                            .foregroundStyle(Color.iwOutline)
-                                        Text("Top 5% this week")
-                                            .font(IWFont.titleMedium())
-                                            .foregroundStyle(Color.iwOnSurface)
-                                        Text("\(rank.rank.formatted()) out of \(vm.totalParticipants.formatted()) walkers")
-                                            .font(IWFont.bodyMedium())
-                                            .foregroundStyle(Color.iwOutline)
+                            HStack(spacing: 0) {
+                                VStack(spacing: 2) {
+                                    Text(vm.thisWeekAvg.formatted())
+                                        .font(IWFont.labelLarge())
+                                        .foregroundStyle(Color.iwPrimary)
+                                    Text("本周均")
+                                        .font(IWFont.labelSmall())
+                                        .foregroundStyle(Color.iwOutline)
+                                }
+                                .frame(width: 80)
+
+                                Divider().frame(height: 40)
+
+                                VStack(spacing: 2) {
+                                    Text(vm.lastWeekAvg.formatted())
+                                        .font(IWFont.labelLarge())
+                                        .foregroundStyle(Color.iwOutline)
+                                    Text("上周均")
+                                        .font(IWFont.labelSmall())
+                                        .foregroundStyle(Color.iwOutline)
+                                }
+                                .frame(width: 80)
+
+                                Spacer()
+
+                                let pct = vm.weekOverWeekPercent
+                                HStack(spacing: 4) {
+                                    Image(systemName: pct >= 0 ? "arrow.up.circle.fill" : "arrow.down.circle.fill")
+                                        .foregroundStyle(pct >= 0 ? Color.iwPrimary : Color.iwTertiary)
+                                    Text("\(pct >= 0 ? "+" : "")\(pct)%")
+                                        .font(IWFont.labelLarge())
+                                        .foregroundStyle(pct >= 0 ? Color.iwPrimary : Color.iwTertiary)
+                                }
+                            }
+
+                            if !vm.thisWeekDaily.isEmpty {
+                                let maxSteps = max(
+                                    vm.thisWeekDaily.map(\.steps).max() ?? 1,
+                                    vm.lastWeekDaily.map(\.steps).max() ?? 1,
+                                    1
+                                )
+                                HStack(alignment: .bottom, spacing: 6) {
+                                    ForEach(0..<min(7, vm.thisWeekDaily.count), id: \.self) { i in
+                                        VStack(spacing: 2) {
+                                            ZStack(alignment: .bottom) {
+                                                if i < vm.lastWeekDaily.count {
+                                                    let h = CGFloat(vm.lastWeekDaily[i].steps) / CGFloat(maxSteps)
+                                                    RoundedRectangle(cornerRadius: 3)
+                                                        .fill(Color.iwSurfaceContainerHigh)
+                                                        .frame(height: max(4, 50 * h))
+                                                        .frame(maxWidth: .infinity)
+                                                }
+                                                let h = CGFloat(vm.thisWeekDaily[i].steps) / CGFloat(maxSteps)
+                                                RoundedRectangle(cornerRadius: 3)
+                                                    .fill(Color.iwPrimary.opacity(0.85))
+                                                    .frame(height: max(4, 50 * h))
+                                                    .frame(maxWidth: .infinity)
+                                            }
+                                            .frame(height: 50)
+                                            Text(vm.thisWeekDaily[i].shortDayName)
+                                                .font(IWFont.labelSmall())
+                                                .foregroundStyle(Color.iwOutline)
+                                        }
                                     }
                                 }
                             }
+
+                            Text(vm.comparisonMessage)
+                                .font(IWFont.labelMedium())
+                                .foregroundStyle(Color.iwOutline)
                         }
                     }
                 }
@@ -104,9 +157,7 @@ struct BadgesView: View {
         }
         .background(Color.iwSurface)
         .onAppear { vm.animateOnAppear() }
-        .sheet(isPresented: $vm.showLeaderboard) {
-            LeaderboardSheet(entries: vm.leaderboard)
-        }
+        .task { await vm.loadComparisonData() }
         .sheet(item: $vm.selectedBadge) { badge in
             BadgeDetailSheet(badge: badge)
         }
