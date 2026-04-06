@@ -16,6 +16,7 @@ final class CoinViewModel {
     private let transactionsKey = "iw_coin_transactions"
     private let todayTiersKey = "iw_today_tiers"
     private let tiersDateKey = "iw_tiers_date"
+    private let personalGoalKey = "iw_personal_goal"
 
     init() {
         if let data = UserDefaults.standard.data(forKey: accountKey),
@@ -42,7 +43,12 @@ final class CoinViewModel {
             self.todayTiers = StepTier.allTiers
         }
 
-        self.personalGoal = .mock
+        if let data = UserDefaults.standard.data(forKey: personalGoalKey),
+           let saved = try? JSONDecoder().decode(PersonalGoal.self, from: data) {
+            self.personalGoal = saved
+        } else {
+            self.personalGoal = .mock
+        }
     }
 
     // MARK: - Earn
@@ -108,6 +114,7 @@ final class CoinViewModel {
                 source: .personalGoal,
                 description: "Personal goal: \(personalGoal.targetSteps.formatted()) steps"
             )
+            savePersonalGoal()
         }
 
         saveTiers()
@@ -127,6 +134,21 @@ final class CoinViewModel {
         todayTiers.filter(\.isReached).map(\.id).max() ?? 0
     }
 
+    func setPersonalGoal(targetSteps: Int) {
+        personalGoal = PersonalGoal.from(target: targetSteps)
+        savePersonalGoal()
+    }
+
+    func resetAllData() {
+        account = .empty
+        transactions = []
+        todayTiers = StepTier.allTiers
+        personalGoal = .mock
+        save()
+        saveTiers()
+        savePersonalGoal()
+    }
+
     // MARK: - Persistence
 
     private func save() {
@@ -143,6 +165,12 @@ final class CoinViewModel {
             UserDefaults.standard.set(data, forKey: todayTiersKey)
         }
         UserDefaults.standard.set(Self.todayString(), forKey: tiersDateKey)
+    }
+
+    private func savePersonalGoal() {
+        if let data = try? JSONEncoder().encode(personalGoal) {
+            UserDefaults.standard.set(data, forKey: personalGoalKey)
+        }
     }
 
     private static func todayString() -> String {
