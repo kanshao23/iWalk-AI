@@ -59,7 +59,7 @@ struct StreakBadgeView: View {
                     }
                 }
 
-                if streak.isAtRisk {
+                if streak.isAtRisk && streak.currentStreak > 0 {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 12))
