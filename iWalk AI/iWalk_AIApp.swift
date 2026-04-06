@@ -44,6 +44,10 @@ struct iWalk_AIApp: App {
     @State private var streakVM = StreakViewModel()
     @State private var journeyVM = JourneyViewModel()
 
+    init() {
+        _ = StoreKitManager.shared
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

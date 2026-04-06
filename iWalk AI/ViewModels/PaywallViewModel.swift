@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 
 enum PricingPlan: String, CaseIterable, Identifiable {
     case weekly
@@ -20,9 +21,7 @@ enum PricingPlan: String, CaseIterable, Identifiable {
         }
     }
 
-    var period: String {
-        "/week"
-    }
+    var period: String { "/week" }
 
     var perWeekPrice: String? {
         switch self {
@@ -37,14 +36,26 @@ enum PricingPlan: String, CaseIterable, Identifiable {
         case .yearly: "SAVE 74%"
         }
     }
+
+    var productID: String {
+        switch self {
+        case .weekly: "kanshaous.iwalk.weekly"
+        case .yearly: "kanshaous.iwalk.yearly"
+        }
+    }
 }
 
 @Observable
 final class PaywallViewModel {
     var selectedPlan: PricingPlan = .yearly
-    var isPurchasing = false
     var showRetentionOffer = false
     var retentionPrice = "$29.99/year"
+    var purchaseError: String?
+
+    private let hasShownRetentionKey = "iw_has_shown_retention"
+
+    var isPurchasing: Bool { StoreKitManager.shared.isLoading }
+    var isPremium: Bool { StoreKitManager.shared.isPremium }
 
     let features: [(icon: String, title: String, description: String)] = [
         ("brain.head.profile", "AI Health Insights", "Personalized health analysis powered by AI"),
@@ -56,21 +67,36 @@ final class PaywallViewModel {
 
     let socialProof = "Join 25,000+ walkers already improving their health"
 
-    func purchase() {
-        isPurchasing = true
-        // StoreKit purchase integration placeholder
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            self?.isPurchasing = false
+    func loadProducts() async {
+        await StoreKitManager.shared.loadProducts()
+    }
+
+    func purchase() async -> Bool {
+        purchaseError = nil
+        let storeKit = StoreKitManager.shared
+        guard let product = storeKit.products.first(where: { $0.id == selectedPlan.productID }) else {
+            purchaseError = "Product not available. Please try again."
+            return false
+        }
+        let success = await storeKit.purchase(product)
+        if let error = storeKit.errorMessage {
+            purchaseError = error
+        }
+        return success
+    }
+
+    func restore() async {
+        purchaseError = nil
+        await StoreKitManager.shared.restore()
+        if let error = StoreKitManager.shared.errorMessage {
+            purchaseError = error
         }
     }
 
-    func restore() {
-        // StoreKit restore purchases placeholder
-    }
-
     func dismiss() {
-        // Show retention offer on first dismiss attempt
-        if !showRetentionOffer {
+        let hasShown = UserDefaults.standard.bool(forKey: hasShownRetentionKey)
+        if !hasShown && !isPremium {
+            UserDefaults.standard.set(true, forKey: hasShownRetentionKey)
             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                 showRetentionOffer = true
             }

@@ -14,7 +14,7 @@ struct PaywallView: View {
                 VStack(spacing: 0) {
                     // Close & Restore
                     HStack {
-                        Button("Restore") { vm.restore() }
+                        Button("Restore") { Task { await vm.restore() } }
                             .font(IWFont.labelMedium())
                             .foregroundStyle(Color.iwOutline)
                         Spacer()
@@ -133,27 +133,36 @@ struct PaywallView: View {
 
                     // CTA Button
                     Button {
-                        vm.purchase()
-                    } label: {
-                        HStack(spacing: 8) {
-                            if vm.isPurchasing {
-                                ProgressView()
-                                    .tint(.white)
-                            } else {
-                                Text("Start My 7-Day Free Trial")
-                                    .font(IWFont.titleMedium())
-                                    .fontWeight(.semibold)
-                            }
+                        Task {
+                            let success = await vm.purchase()
+                            if success { dismiss() }
                         }
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
-                        .background(Color.iwPrimaryGradient)
-                        .clipShape(Capsule())
+                    } label: {
+                        if vm.isPurchasing {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .frame(height: 20)
+                        } else {
+                            Text("Start 7-Day Free Trial")
+                                .font(IWFont.labelLarge())
+                                .foregroundStyle(.white)
+                        }
                     }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(Color.iwPrimary)
+                    .clipShape(Capsule())
                     .disabled(vm.isPurchasing)
                     .padding(.horizontal, 20)
                     .padding(.top, 24)
+
+                    if let error = vm.purchaseError {
+                        Text(error)
+                            .font(IWFont.labelMedium())
+                            .foregroundStyle(Color.iwError)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                    }
 
                     // Billing note
                     Text(billingNote)
@@ -185,7 +194,10 @@ struct PaywallView: View {
                     price: vm.retentionPrice,
                     onAccept: {
                         vm.showRetentionOffer = false
-                        vm.purchase()
+                        Task {
+                            let success = await vm.purchase()
+                            if success { dismiss() }
+                        }
                     },
                     onDecline: {
                         vm.declineRetention()
@@ -199,6 +211,9 @@ struct PaywallView: View {
             withAnimation(.easeOut(duration: 0.6)) {
                 appeared = true
             }
+        }
+        .task {
+            await vm.loadProducts()
         }
     }
 
