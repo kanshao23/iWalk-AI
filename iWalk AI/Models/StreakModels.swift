@@ -1,6 +1,6 @@
 import Foundation
 
-struct StreakData: Codable {
+struct StreakData: Codable, Equatable {
     var currentStreak: Int
     var longestStreak: Int
     var lastCompletedDate: Date?
@@ -29,8 +29,7 @@ struct StreakData: Codable {
     }
 
     var isAtRisk: Bool {
-        let hour = Calendar.current.component(.hour, from: .now)
-        return hour >= 20 && !isActiveToday
+        !isActiveToday
     }
 
     var dailyCoinReward: Int {
