@@ -183,7 +183,7 @@ struct DashboardView: View {
             }
         }
         .sheet(isPresented: $vm.showHistory) {
-            HistorySheet(weeklyActivity: vm.weeklyActivity)
+            WalkHistoryView()
         }
         .sheet(isPresented: $vm.showJourneyDetail) {
             if let journey = journeyVM.activeJourney {
@@ -210,46 +210,3 @@ struct DashboardView: View {
     }
 }
 
-// MARK: - History Sheet
-
-private struct HistorySheet: View {
-    let weeklyActivity: [DailyStats]
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            List(weeklyActivity) { day in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(day.date.formatted(.dateTime.weekday(.wide).month().day()))
-                            .font(IWFont.labelLarge())
-                            .foregroundStyle(Color.iwOnSurface)
-                        Text("\(day.steps.formatted()) steps")
-                            .font(IWFont.bodyMedium())
-                            .foregroundStyle(Color.iwOutline)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("\(day.calories) kcal")
-                            .font(IWFont.labelMedium())
-                            .foregroundStyle(Color.iwTertiary)
-                        Text(String(format: "%.1f km", day.distanceKm))
-                            .font(IWFont.labelMedium())
-                            .foregroundStyle(Color.iwSecondary)
-                    }
-                }
-                .listRowBackground(Color.iwSurfaceContainerLowest)
-            }
-            .scrollContentBackground(.hidden)
-            .background(Color.iwSurface)
-            .navigationTitle("Activity History")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(Color.iwPrimary)
-                }
-            }
-        }
-    }
-}

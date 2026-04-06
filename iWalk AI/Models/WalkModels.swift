@@ -81,6 +81,12 @@ struct WalkSession: Codable, Equatable {
         return (Double(elapsedSeconds) / 60.0) / distanceKm
     }
 
+    var formattedDuration: String {
+        let mins = elapsedSeconds / 60
+        let secs = elapsedSeconds % 60
+        return String(format: "%d:%02d", mins, secs)
+    }
+
     var elapsedFormatted: String {
         let mins = elapsedSeconds / 60
         let secs = elapsedSeconds % 60
