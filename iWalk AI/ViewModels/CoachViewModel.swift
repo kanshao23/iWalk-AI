@@ -1,45 +1,155 @@
 import SwiftUI
 
+@MainActor
 @Observable
 final class CoachViewModel {
     var user = UserProfile.mock
     var messages: [CoachMessage] = []
-    var recommendations = CoachRecommendation.mockRecommendations
+    var recommendations: [CoachRecommendation] = []
     var suggestions = CoachSuggestion.mockSuggestions
     var inputText = ""
     var isTyping = false
     var expandedRecommendationId: UUID?
     var showChat = false
+    var todaySteps: Int = DailyStats.mockToday.steps
+    var weeklyActivity: [DailyStats] = DailyStats.mockWeek
+    var latestHeartRate: Int?
+    var hasRealActivityData = false
+    private(set) var streak: StreakData = .mock
+
+    private let healthKit = HealthKitManager.shared
+    private let apiClient = CoachAPIClient()
+    private let maxStoredMessages = 60
+    private let messagesStorageKey = "iw_coach_messages_v1"
+    private var pendingResponseCount = 0
+
+    init() {
+        loadMessages()
+        refreshRecommendations()
+        refreshDynamicSuggestions()
+    }
+
+    var analysisSubtitle: String {
+        hasRealActivityData
+        ? "Based on your latest activity data."
+        : "Personalized from your goal and streak."
+    }
+
+    var goalSteps: Int { user.dailyStepGoal }
+
+    var stepsRemaining: Int {
+        max(goalSteps - todaySteps, 0)
+    }
+
+    var streakStepsRemaining: Int {
+        max(1_500 - todaySteps, 0)
+    }
+
+    var weeklyAverageSteps: Int {
+        let total = weeklyActivity.map(\.steps).reduce(0, +)
+        return weeklyActivity.isEmpty ? 0 : total / weeklyActivity.count
+    }
 
     var todaysFocus: String {
-        "Reach 8,500 steps to maintain your 4-day streak."
+        if stepsRemaining == 0 {
+            return "Goal complete. Add a short recovery walk to lock in consistency."
+        }
+        if streak.isAtRisk && streak.currentStreak > 0 {
+            return "Protect your \(streak.currentStreak)-day streak and close \(stepsRemaining.formatted()) remaining steps."
+        }
+        return "Reach \(goalSteps.formatted()) steps today. \(stepsRemaining.formatted()) to go."
     }
 
     var focusDetail: String {
-        "I'd recommend hitting this goal before evening. Hitting the post-lunch window will significantly improve your daily calorie burn."
+        let hour = Calendar.current.component(.hour, from: .now)
+        let window: String
+        switch hour {
+        case 5..<11: window = "morning window"
+        case 11..<16: window = "post-lunch window"
+        case 16..<20: window = "early-evening window"
+        default: window = "next available 20-minute window"
+        }
+
+        if weeklyAverageSteps >= goalSteps {
+            return "You're trending above your weekly target. Use the \(window) to keep momentum without overloading."
+        }
+        return "You're averaging \(weeklyAverageSteps.formatted()) steps this week. A focused walk in the \(window) can recover the gap."
+    }
+
+    func refreshContext(streak: StreakData) async {
+        self.streak = streak
+
+        guard healthKit.isAuthorized else {
+            hasRealActivityData = false
+            if weeklyActivity.isEmpty {
+                weeklyActivity = DailyStats.mockWeek
+            }
+            refreshRecommendations()
+            return
+        }
+
+        async let fetchedSteps = healthKit.fetchTodaySteps()
+        async let fetchedWeekly = healthKit.fetchWeeklySteps()
+        async let fetchedHeartRate = healthKit.fetchLatestHeartRate()
+
+        todaySteps = await fetchedSteps
+        let weekly = await fetchedWeekly
+        weeklyActivity = weekly.isEmpty ? weeklyActivity : weekly
+        latestHeartRate = await fetchedHeartRate
+        hasRealActivityData = true
+        refreshRecommendations()
+        refreshDynamicSuggestions()
     }
 
     func sendMessage(_ text: String) {
-        guard !text.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
 
-        let userMsg = CoachMessage.userMessage(text)
+        let userMsg = CoachMessage.userMessage(trimmed)
         withAnimation(.easeInOut(duration: 0.2)) {
             messages.append(userMsg)
             showChat = true
         }
         inputText = ""
+        persistMessages()
+        enqueueAssistantResponse(for: trimmed)
+    }
 
-        // Find matching suggestion response or generate generic
-        let matchedSuggestion = suggestions.first { text.contains($0.text.prefix(20)) }
-        let response = matchedSuggestion?.aiResponse ?? generateResponse(for: text)
-
-        // Simulate typing delay
+    private func enqueueAssistantResponse(for userText: String) {
+        pendingResponseCount += 1
         isTyping = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            self.isTyping = false
-            withAnimation(.easeInOut(duration: 0.3)) {
-                self.messages.append(CoachMessage.assistantMessage(response))
+
+        Task {
+            // Build message history for API (last 10 messages only)
+            let apiHistory = messages.suffix(10).map { msg in
+                CoachAPIClient.ChatMessage(
+                    role: msg.role == .user ? "user" : "assistant",
+                    content: msg.content
+                )
             }
+
+            let context = CoachAPIClient.CoachContext(
+                steps: todaySteps,
+                streak: streak.currentStreak,
+                goal: goalSteps,
+                userName: user.name
+            )
+
+            let reply: String
+            do {
+                reply = try await apiClient.sendMessage(history: apiHistory, context: context)
+            } catch {
+                // Graceful local fallback
+                reply = generateResponse(for: userText)
+            }
+
+            withAnimation(.easeInOut(duration: 0.3)) {
+                self.messages.append(CoachMessage.assistantMessage(reply))
+            }
+            self.pendingResponseCount = max(self.pendingResponseCount - 1, 0)
+            self.isTyping = self.pendingResponseCount > 0
+            self.persistMessages()
+            self.refreshDynamicSuggestions()
         }
     }
 
@@ -58,8 +168,8 @@ final class CoachViewModel {
     }
 
     func generateStreakMessage(streak: StreakData) -> String? {
-        if streak.isAtRisk {
-            return "Hey \(user.name)! You still need about 1,500 steps to keep your \(streak.currentStreak)-day streak alive. A quick 15-minute walk should do it!"
+        if streak.isAtRisk && streak.currentStreak > 0 && streakStepsRemaining > 0 {
+            return "Hey \(user.name)! \(streakStepsRemaining.formatted()) more steps keeps your \(streak.currentStreak)-day streak alive. A quick 15-minute walk should do it."
         }
         if StreakData.milestones.contains(streak.currentStreak) && streak.isActiveToday {
             return "Amazing! You've hit a \(streak.currentStreak)-day streak! That's real dedication. Your consistency is building lasting health habits."
@@ -73,15 +183,151 @@ final class CoachViewModel {
     private func generateResponse(for input: String) -> String {
         let lowered = input.lowercased()
         if lowered.contains("step") || lowered.contains("walk") {
-            return "Walking is one of the most accessible forms of exercise. For your current fitness level, I recommend aiming for 8,000-10,000 steps daily. Try breaking it into 3 shorter walks throughout the day if a single long walk feels challenging."
+            if stepsRemaining == 0 {
+                return "You're already at \(todaySteps.formatted()) steps today, above your \(goalSteps.formatted()) target. Keep it light with a recovery walk and mobility work."
+            }
+            let minutesNeeded = max(Int(ceil(Double(stepsRemaining) / 110.0)), 10)
+            return "You're at \(todaySteps.formatted()) of \(goalSteps.formatted()) steps. A brisk \(minutesNeeded)-minute walk should close most of the \(stepsRemaining.formatted())-step gap."
         } else if lowered.contains("calorie") || lowered.contains("burn") || lowered.contains("weight") {
-            return "At a brisk pace (100 steps/minute), you burn approximately 5 calories per minute. A 30-minute walk burns roughly 150 calories. Combined with a balanced diet, regular walking can support healthy weight management."
+            let estimatedCalories = max(Int(Double(todaySteps) * 0.045), 0)
+            return "Based on today's \(todaySteps.formatted()) steps, you've burned roughly \(estimatedCalories) active calories from walking. A 30-minute brisk walk typically adds 140-180 calories."
         } else if lowered.contains("heart") || lowered.contains("cardio") {
-            return "Regular walking strengthens your heart and improves circulation. Studies show that walking 30 minutes daily reduces heart disease risk by up to 35%. Your resting heart rate typically decreases as your cardiovascular fitness improves."
+            if let latestHeartRate {
+                return "Your latest recorded heart rate is \(latestHeartRate) BPM. Regular zone-2 walks (comfortable but brisk) are a practical way to improve cardio efficiency over time."
+            }
+            return "Regular walking strengthens your heart and improves circulation. A consistent 30-minute daily walk is enough to improve cardiovascular fitness for most people."
         } else if lowered.contains("sleep") {
             return "Walking, especially in the morning or early afternoon, can significantly improve sleep quality. Exposure to natural light during walks helps regulate your circadian rhythm. Avoid vigorous walking within 2 hours of bedtime."
         } else {
             return "That's a great question! Walking offers numerous health benefits including improved cardiovascular health, better mood, stronger bones, and enhanced creativity. Is there a specific aspect of walking you'd like to explore further?"
         }
+    }
+
+    private func refreshRecommendations() {
+        let gap = stepsRemaining
+        let streakGap = streakStepsRemaining
+        var cards: [CoachRecommendation] = []
+
+        if gap > 0 {
+            cards.append(
+                CoachRecommendation(
+                    icon: "target",
+                    iconColor: .iwPrimary,
+                    backgroundColor: .iwPrimaryFixed,
+                    title: "Close Today's Gap",
+                    description: "\(gap.formatted()) steps left to hit your daily goal.",
+                    detailedInfo: "Split the remaining steps into two short walks. A 12-minute walk after your next meal and one more in the evening is enough for most days."
+                )
+            )
+        }
+
+        if streak.isAtRisk && streak.currentStreak > 0 && streakGap > 0 {
+            cards.append(
+                CoachRecommendation(
+                    icon: "flame.fill",
+                    iconColor: .iwTertiary,
+                    backgroundColor: .iwTertiaryFixed,
+                    title: "Streak Protection",
+                    description: "\(streakGap.formatted()) steps protects your \(streak.currentStreak)-day streak tonight.",
+                    detailedInfo: "Your streak completion threshold is 1,500 steps. Prioritize this first, then decide whether to push for your full daily goal."
+                )
+            )
+        }
+
+        if weeklyAverageSteps < goalSteps {
+            cards.append(
+                CoachRecommendation(
+                    icon: "chart.line.uptrend.xyaxis",
+                    iconColor: .iwSecondary,
+                    backgroundColor: .iwSecondaryFixed,
+                    title: "Lift Weekly Average",
+                    description: "You're averaging \(weeklyAverageSteps.formatted()) steps vs \(goalSteps.formatted()) target.",
+                    detailedInfo: "Focus on consistency over intensity. Adding 1,200-1,500 steps on low-activity days will move your weekly trend faster than one very long session."
+                )
+            )
+        } else if let latestHeartRate, latestHeartRate >= 78 {
+            cards.append(
+                CoachRecommendation(
+                    icon: "heart.fill",
+                    iconColor: .iwSecondary,
+                    backgroundColor: .iwSecondaryFixed,
+                    title: "Heart-rate Recovery Walk",
+                    description: "Latest heart rate is \(latestHeartRate) BPM. A steady walk can help regulation.",
+                    detailedInfo: "Use a conversational pace for 20-30 minutes. Keep breathing controlled and avoid sprint intervals when recovery is the priority."
+                )
+            )
+        } else {
+            cards.append(
+                CoachRecommendation(
+                    icon: "leaf.fill",
+                    iconColor: .iwTertiaryContainer,
+                    backgroundColor: .iwPrimaryContainer,
+                    title: "Nature Reset",
+                    description: "Take one outdoor walk today to reduce stress and improve focus.",
+                    detailedInfo: "Green-space walks are linked with stronger stress reduction than indoor treadmill sessions. Even 15 minutes has measurable mental benefits."
+                )
+            )
+        }
+
+        recommendations = Array(cards.prefix(3))
+    }
+
+    func refreshDynamicSuggestions() {
+        let hour = Calendar.current.component(.hour, from: .now)
+        let progressPct = goalSteps > 0 ? Double(todaySteps) / Double(goalSteps) : 0
+        var newSuggestions: [CoachSuggestion] = []
+
+        // Suggestion 1: progress-based
+        if progressPct >= 1.0 {
+            newSuggestions.append(CoachSuggestion(text: "目标达成！今天成绩怎么样？", aiResponse: ""))
+        } else if progressPct < 0.3 && hour >= 14 {
+            newSuggestions.append(CoachSuggestion(text: "现在出门走 20 分钟？", aiResponse: ""))
+        } else {
+            newSuggestions.append(CoachSuggestion(
+                text: "还差 \(stepsRemaining.formatted()) 步达标，怎么加？", aiResponse: ""))
+        }
+
+        // Suggestion 2: streak-based
+        if streak.currentStreak >= 7 {
+            newSuggestions.append(CoachSuggestion(
+                text: "连续 \(streak.currentStreak) 天了，今天冲个人记录？", aiResponse: ""))
+        } else if streak.isAtRisk && streak.currentStreak > 0 {
+            newSuggestions.append(CoachSuggestion(
+                text: "今天还差 \(streakStepsRemaining.formatted()) 步保连续", aiResponse: ""))
+        } else {
+            newSuggestions.append(CoachSuggestion(text: "如何提高步行效率？", aiResponse: ""))
+        }
+
+        // Suggestion 3: time-based
+        switch hour {
+        case 5..<10:
+            newSuggestions.append(CoachSuggestion(text: "晨走有什么好处？", aiResponse: ""))
+        case 12..<14:
+            newSuggestions.append(CoachSuggestion(text: "午饭后散步多久合适？", aiResponse: ""))
+        case 20..<23:
+            newSuggestions.append(CoachSuggestion(text: "睡前散步会影响睡眠吗？", aiResponse: ""))
+        default:
+            newSuggestions.append(CoachSuggestion(text: "今天感觉怎么样？", aiResponse: ""))
+        }
+
+        suggestions = newSuggestions
+    }
+
+    private func loadMessages() {
+        guard let data = UserDefaults.standard.data(forKey: messagesStorageKey),
+              let saved = try? JSONDecoder().decode([CoachMessage].self, from: data) else {
+            return
+        }
+        messages = Array(saved.suffix(maxStoredMessages))
+        showChat = !messages.isEmpty
+    }
+
+    private func persistMessages() {
+        let trimmed = Array(messages.suffix(maxStoredMessages))
+        if trimmed.count != messages.count {
+            messages = trimmed
+        }
+        guard let data = try? JSONEncoder().encode(trimmed) else { return }
+        UserDefaults.standard.set(data, forKey: messagesStorageKey)
     }
 }
