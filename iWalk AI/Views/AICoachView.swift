@@ -125,6 +125,13 @@ struct AICoachView: View {
                         .id("chatBottom")
                     }
 
+                    // Medical disclaimer (required for AI health apps, Apple guideline 1.4.1)
+                    Text("AI suggestions are for informational purposes only and are not a substitute for professional medical advice, diagnosis, or treatment.")
+                        .font(IWFont.labelSmall())
+                        .foregroundStyle(Color.iwOutline.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
+
                     Spacer().frame(height: 10)
                 }
                 .padding(.horizontal, 20)

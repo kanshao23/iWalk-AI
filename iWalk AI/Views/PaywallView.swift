@@ -120,6 +120,7 @@ struct PaywallView: View {
                         ForEach(PricingPlan.allCases) { plan in
                             PricingCard(
                                 plan: plan,
+                                displayPrice: vm.displayPrice(for: plan),
                                 isSelected: vm.selectedPlan == plan
                             )
                             .onTapGesture {
@@ -174,12 +175,12 @@ struct PaywallView: View {
 
                     // Legal links
                     HStack(spacing: 16) {
-                        Button("Terms of Use") {}
+                        Link("Terms of Use", destination: URL(string: "https://www.kanverse.app/iwalk-ai/terms")!)
                             .font(IWFont.labelSmall())
                             .foregroundStyle(Color.iwOutline)
                         Text("·")
                             .foregroundStyle(Color.iwOutlineVariant)
-                        Button("Privacy Policy") {}
+                        Link("Privacy Policy", destination: URL(string: "https://www.kanverse.app/iwalk-ai/privacy")!)
                             .font(IWFont.labelSmall())
                             .foregroundStyle(Color.iwOutline)
                     }
@@ -218,11 +219,12 @@ struct PaywallView: View {
     }
 
     private var billingNote: String {
+        let price = vm.displayPrice(for: vm.selectedPlan)
         switch vm.selectedPlan {
         case .weekly:
-            "Billed $2.99 every week. Cancel anytime in Settings."
+            return "Billed \(price) every week. Cancel anytime in Settings."
         case .yearly:
-            "Billed $39.99 per year. Cancel anytime in Settings."
+            return "Billed \(price) per year. Cancel anytime in Settings."
         }
     }
 
@@ -240,6 +242,7 @@ struct PaywallView: View {
 
 private struct PricingCard: View {
     let plan: PricingPlan
+    let displayPrice: String
     let isSelected: Bool
 
     var body: some View {
@@ -261,17 +264,18 @@ private struct PricingCard: View {
                 .font(IWFont.labelMedium())
                 .foregroundStyle(isSelected ? Color.iwOnSurface : Color.iwOutline)
 
+            // Actual billed amount is the most prominent element (Apple 3.1.2)
             HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Text(plan.price)
+                Text(displayPrice)
                     .font(IWFont.headlineMedium())
                     .foregroundStyle(isSelected ? Color.iwOnSurface : Color.iwOutline)
-                Text(plan.period)
+                Text(plan.billedPeriod)
                     .font(IWFont.labelSmall())
                     .foregroundStyle(Color.iwOutline)
             }
 
-            if let perWeek = plan.perWeekPrice {
-                Text(perWeek)
+            if let equivalent = plan.weeklyEquivalent {
+                Text(equivalent)
                     .font(IWFont.labelSmall())
                     .foregroundStyle(Color.iwPrimary)
                     .fontWeight(.medium)
@@ -289,7 +293,7 @@ private struct PricingCard: View {
         )
         .scaleEffect(isSelected ? 1.02 : 1.0)
         .animation(.easeInOut(duration: 0.2), value: isSelected)
-        .accessibilityLabel("\(plan.title) plan, \(plan.price) \(plan.period)")
+        .accessibilityLabel("\(plan.title) plan, \(displayPrice) \(plan.billedPeriod)")
     }
 }
 

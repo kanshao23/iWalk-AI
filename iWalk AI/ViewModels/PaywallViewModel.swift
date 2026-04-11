@@ -14,19 +14,27 @@ enum PricingPlan: String, CaseIterable, Identifiable {
         }
     }
 
-    var price: String {
+    /// Fallback billed amount shown before StoreKit products load.
+    var fallbackBilledPrice: String {
         switch self {
         case .weekly: "$2.99"
-        case .yearly: "$0.77"
+        case .yearly: "$39.99"
         }
     }
 
-    var period: String { "/week" }
+    /// Billing period label displayed next to the main price.
+    var billedPeriod: String {
+        switch self {
+        case .weekly: "/week"
+        case .yearly: "/yr"
+        }
+    }
 
-    var perWeekPrice: String? {
+    /// Secondary per-week equivalent shown below the main price (annual only).
+    var weeklyEquivalent: String? {
         switch self {
         case .weekly: nil
-        case .yearly: "$39.99/yr billed annually"
+        case .yearly: "≈ $0.77 / week"
         }
     }
 
@@ -65,7 +73,14 @@ final class PaywallViewModel {
         ("heart.text.clipboard", "Health Reports", "Weekly AI-generated wellness reports"),
     ]
 
-    let socialProof = "Join 25,000+ walkers already improving their health"
+    let socialProof = "Track smarter. Walk further. Feel better."
+
+    /// Returns the StoreKit-formatted price for a plan, falling back to the hardcoded value.
+    func displayPrice(for plan: PricingPlan) -> String {
+        StoreKitManager.shared.products
+            .first(where: { $0.id == plan.productID })?.displayPrice
+            ?? plan.fallbackBilledPrice
+    }
 
     func loadProducts() async {
         await StoreKitManager.shared.loadProducts()
