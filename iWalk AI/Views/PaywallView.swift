@@ -234,6 +234,10 @@ struct PaywallView: View {
             dismiss()
         } else {
             vm.dismiss()
+            // If retention wasn't triggered (already shown or premium), dismiss immediately
+            if !vm.showRetentionOffer {
+                dismiss()
+            }
         }
     }
 }
@@ -339,9 +343,13 @@ private struct RetentionOfferView: View {
                     }
 
                     Button(action: onDecline) {
-                        Text("No thanks")
+                        Text("No thanks, continue for free")
                             .font(IWFont.labelMedium())
                             .foregroundStyle(Color.iwOutline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.iwSurfaceContainerHigh)
+                            .clipShape(Capsule())
                     }
                 }
             }
