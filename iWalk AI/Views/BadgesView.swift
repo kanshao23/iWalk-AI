@@ -190,6 +190,7 @@ private struct AppSettingsSheet: View {
     @State private var actionFeedback: String?
 
     private let healthKit = HealthKitManager.shared
+    private let notifications = NotificationManager.shared
 
     private var reminderDateBinding: Binding<Date> {
         Binding<Date>(
@@ -356,6 +357,22 @@ private struct AppSettingsSheet: View {
             }
             .onAppear {
                 personalGoalSteps = coinVM.personalGoal.targetSteps
+                syncReminderNotifications()
+            }
+            .onChange(of: dailyReminderEnabled) { _, _ in
+                syncReminderNotifications()
+            }
+            .onChange(of: streakRiskReminderEnabled) { _, _ in
+                syncReminderNotifications()
+            }
+            .onChange(of: eveningReviewReminderEnabled) { _, _ in
+                syncReminderNotifications()
+            }
+            .onChange(of: reminderHour) { _, _ in
+                syncReminderNotifications()
+            }
+            .onChange(of: reminderMinute) { _, _ in
+                syncReminderNotifications()
             }
         }
     }
@@ -370,6 +387,23 @@ private struct AppSettingsSheet: View {
                 actionFeedback = healthKit.isAuthorized
                 ? "HealthKit connected successfully."
                 : "HealthKit authorization was not granted."
+            }
+        }
+    }
+
+    private func syncReminderNotifications() {
+        Task {
+            let success = await notifications.syncReminders(
+                dailyEnabled: dailyReminderEnabled,
+                streakRiskEnabled: streakRiskReminderEnabled,
+                eveningReviewEnabled: eveningReviewReminderEnabled,
+                reminderHour: reminderHour,
+                reminderMinute: reminderMinute
+            )
+
+            guard !success else { return }
+            await MainActor.run {
+                actionFeedback = "Notifications are disabled. Enable them in iOS Settings."
             }
         }
     }
@@ -550,6 +584,7 @@ private struct LeaderboardSheet: View {
 private struct BadgeDetailSheet: View {
     let badge: Badge
     @Environment(\.dismiss) private var dismiss
+    @State private var sharePayload: SharePayload?
 
     var body: some View {
         VStack(spacing: 24) {
@@ -596,7 +631,12 @@ private struct BadgeDetailSheet: View {
 
             if badge.isUnlocked {
                 Button {
-                    // Share using system share sheet
+                    let stats = ShareCardStats.badgeUnlock(badgeName: badge.name)
+                    if let image = ShareCardRenderer.renderImage(stats: stats) {
+                        sharePayload = SharePayload(items: [image, "I unlocked \(badge.name) in iWalk AI!"])
+                    } else {
+                        sharePayload = SharePayload(items: ["I unlocked \(badge.name) in iWalk AI!"])
+                    }
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "square.and.arrow.up")
@@ -621,7 +661,25 @@ private struct BadgeDetailSheet: View {
         .padding(.horizontal, 32)
         .background(Color.iwSurface)
         .presentationDetents([.medium])
+        .sheet(item: $sharePayload) { payload in
+            ActivityShareSheet(activityItems: payload.items)
+        }
     }
+}
+
+private struct SharePayload: Identifiable {
+    let id = UUID()
+    let items: [Any]
+}
+
+private struct ActivityShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 extension Badge: Hashable {

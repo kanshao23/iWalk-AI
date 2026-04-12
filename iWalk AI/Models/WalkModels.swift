@@ -555,6 +555,41 @@ struct CoachSuggestion: Identifiable {
     ]
 }
 
+// MARK: - Weekly Health Report
+
+struct WeeklyReport {
+    let totalSteps: Int
+    let totalCalories: Int
+    let totalDistanceKm: Double
+    let activeDays: Int
+    let bestDaySteps: Int
+    let bestDayName: String
+    let weekOverWeekChange: Int
+    let heartRate: Int?
+
+    var grade: String {
+        switch activeDays {
+        case 6...7: return "Excellent"
+        case 4...5: return "Good"
+        case 2...3: return "Getting There"
+        default:    return "Just Starting"
+        }
+    }
+
+    var gradeColor: Color {
+        switch activeDays {
+        case 6...7: return .iwPrimary
+        case 4...5: return .iwSecondary
+        case 2...3: return .iwTertiary
+        default:    return .iwOutline
+        }
+    }
+
+    var changeLabel: String {
+        weekOverWeekChange >= 0 ? "+\(weekOverWeekChange)%" : "\(weekOverWeekChange)%"
+    }
+}
+
 // MARK: - Leaderboard Sync
 
 enum LeaderboardSyncSource {
