@@ -486,6 +486,11 @@ enum TabItem: Int, CaseIterable {
 
 struct GlassTabBar: View {
     @Binding var selectedTab: TabItem
+    var isPremium: Bool = true
+
+    private func isProTab(_ tab: TabItem) -> Bool {
+        tab == .coach || tab == .insights
+    }
 
     var body: some View {
         HStack {
@@ -496,15 +501,26 @@ struct GlassTabBar: View {
                     }
                 } label: {
                     VStack(spacing: 4) {
-                        Image(systemName: tab.icon)
-                            .font(.system(size: 18))
-                            .scaleEffect(selectedTab == tab ? 1.15 : 1.0)
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: tab.icon)
+                                .font(.system(size: 18))
+                                .scaleEffect(selectedTab == tab ? 1.15 : 1.0)
+                            if !isPremium && isProTab(tab) {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 7, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .padding(2.5)
+                                    .background(Color.iwPrimary)
+                                    .clipShape(Circle())
+                                    .offset(x: 7, y: -5)
+                            }
+                        }
                         Text(tab.title)
                             .font(IWFont.labelSmall())
                     }
                     .foregroundStyle(selectedTab == tab ? Color.iwPrimary : Color.iwOnSurfaceVariant)
                     .frame(maxWidth: .infinity)
-                    .accessibilityLabel(tab.title)
+                    .accessibilityLabel(tab.title + (!isPremium && isProTab(tab) ? ", Pro feature" : ""))
                     .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
                 }
             }
@@ -516,6 +532,118 @@ struct GlassTabBar: View {
                 .fill(.ultraThinMaterial)
                 .ignoresSafeArea(edges: .bottom)
         )
+    }
+}
+
+// MARK: - Pro Gate View
+
+struct ProGateView: View {
+    let featureIcon: String
+    let featureName: String
+    let featureDescription: String
+
+    @State private var showPaywall = false
+    @State private var appeared = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 32) {
+                // Icon with lock badge
+                ZStack(alignment: .bottomTrailing) {
+                    Circle()
+                        .fill(Color.iwPrimaryFixed.opacity(0.12))
+                        .frame(width: 100, height: 100)
+                        .overlay(
+                            Image(systemName: featureIcon)
+                                .font(.system(size: 40))
+                                .foregroundStyle(Color.iwPrimary.opacity(0.4))
+                        )
+                    Circle()
+                        .fill(Color.iwPrimary)
+                        .frame(width: 32, height: 32)
+                        .overlay(
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                        )
+                        .offset(x: 4, y: 4)
+                }
+                .scaleEffect(appeared ? 1 : 0.7)
+                .opacity(appeared ? 1 : 0)
+
+                // Text
+                VStack(spacing: 10) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 12, weight: .bold))
+                        Text("Pro Feature")
+                            .font(IWFont.labelMedium())
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundStyle(Color.iwPrimary)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(Color.iwPrimary.opacity(0.1))
+                    .clipShape(Capsule())
+
+                    Text(featureName)
+                        .font(IWFont.headlineMedium())
+                        .foregroundStyle(Color.iwOnSurface)
+
+                    Text(featureDescription)
+                        .font(IWFont.bodyMedium())
+                        .foregroundStyle(Color.iwOutline)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
+                }
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 12)
+
+                // CTA
+                VStack(spacing: 12) {
+                    Button {
+                        showPaywall = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text("Upgrade to Pro")
+                                .font(IWFont.labelLarge())
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(Color.iwPrimaryGradient)
+                        .clipShape(Capsule())
+                    }
+
+                    Button {
+                        showPaywall = true
+                    } label: {
+                        Text("Restore Purchase")
+                            .font(IWFont.labelSmall())
+                            .foregroundStyle(Color.iwOutline)
+                    }
+                }
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 16)
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
+        }
+        .background(Color.iwSurface)
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.5).delay(0.1)) {
+                appeared = true
+            }
+        }
     }
 }
 
