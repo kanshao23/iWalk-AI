@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct DashboardView: View {
+    @Binding var openActiveWalk: Bool
     @State private var vm = DashboardViewModel()
     @Environment(\.coinVM) private var coinVM
     @Environment(\.streakVM) private var streakVM
@@ -30,7 +31,7 @@ struct DashboardView: View {
                         CoinBalanceView(balance: coinVM.account.balance)
                     }
 
-                    // Evening Review or Daytime Progress
+                    // Evening Review or Daytime Hero Card
                     Group {
                         if vm.isEveningMode, let review = vm.eveningReview {
                             AnimatedCard(delay: 0.1) {
@@ -41,15 +42,44 @@ struct DashboardView: View {
                             }
                             .transition(.opacity)
                         } else {
-                            // Tiered Progress Bar
+                            // Hero Card: Progress + Stats merged
                             AnimatedCard(delay: 0.1) {
-                                TieredProgressBar(
-                                    currentSteps: vm.animatedSteps,
-                                    goalSteps: vm.stepGoal,
-                                    tiers: coinVM.todayTiers,
-                                    personalGoal: coinVM.personalGoal,
-                                    animatedProgress: vm.animatedProgress
-                                )
+                                VStack(spacing: 0) {
+                                    TieredProgressBar(
+                                        currentSteps: vm.animatedSteps,
+                                        goalSteps: vm.stepGoal,
+                                        tiers: coinVM.todayTiers,
+                                        personalGoal: coinVM.personalGoal,
+                                        animatedProgress: vm.animatedProgress
+                                    )
+
+                                    Divider()
+                                        .padding(.horizontal, 16)
+
+                                    HStack(spacing: 0) {
+                                        StatCard(
+                                            icon: "flame.fill",
+                                            value: "\(vm.isCaloriesEstimated ? "~" : "")\(vm.todayStats.calories)",
+                                            label: "kcal",
+                                            iconColor: .iwTertiaryContainer
+                                        )
+                                        StatCard(
+                                            icon: "mappin.and.ellipse",
+                                            value: "\(vm.isDistanceEstimated ? "~" : "")\(String(format: "%.1f", vm.todayStats.distanceKm))",
+                                            label: "km",
+                                            iconColor: .iwSecondary
+                                        )
+                                        StatCard(
+                                            icon: "clock.fill",
+                                            value: "\(vm.todayStats.activeMinutes)",
+                                            label: "mins",
+                                            iconColor: .iwPrimaryContainer
+                                        )
+                                    }
+                                    .padding(.vertical, 12)
+                                }
+                                .background(Color.iwSurfaceContainerLowest)
+                                .clipShape(RoundedRectangle(cornerRadius: 20))
                             }
 
                             // Start Walking Button
@@ -61,46 +91,10 @@ struct DashboardView: View {
                     }
                     .animation(.easeInOut(duration: 0.4), value: vm.isEveningMode)
 
-                    // Journey Card
-                    if let journey = journeyVM.activeJourney {
-                        AnimatedCard(delay: 0.15) {
-                            JourneyCard(journey: journey)
-                                .contentShape(Rectangle())
-                                .onTapGesture { vm.showJourneyDetail = true }
-                        }
-                    }
-
-                    // Stats Row
+                    // This Week's Activity
                     AnimatedCard(delay: 0.2) {
-                        HStack(spacing: 0) {
-                            StatCard(
-                                icon: "flame.fill",
-                                value: "\(vm.isCaloriesEstimated ? "~" : "")\(vm.todayStats.calories)",
-                                label: "kcal",
-                                iconColor: .iwTertiaryContainer
-                            )
-                            StatCard(
-                                icon: "mappin.and.ellipse",
-                                value: "\(vm.isDistanceEstimated ? "~" : "")\(String(format: "%.1f", vm.todayStats.distanceKm))",
-                                label: "km",
-                                iconColor: .iwSecondary
-                            )
-                            StatCard(
-                                icon: "clock.fill",
-                                value: "\(vm.todayStats.activeMinutes)",
-                                label: "mins",
-                                iconColor: .iwPrimaryContainer
-                            )
-                        }
-                        .padding(.vertical, 16)
-                        .background(Color.iwSurfaceContainerLowest)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                    }
-
-                    // Today's Activity
-                    AnimatedCard(delay: 0.3) {
                         VStack(spacing: 16) {
-                            SectionHeader("Today's Activity", trailing: "View History") {
+                            SectionHeader("This Week", trailing: "View History") {
                                 vm.showHistory = true
                             }
                             ActivityBarChart(
@@ -109,6 +103,15 @@ struct DashboardView: View {
                                 accentIndex: vm.todayWeekdayIndex
                             )
                             .frame(height: 100)
+                        }
+                    }
+
+                    // Journey Card (long-term goal, after weekly context)
+                    if let journey = journeyVM.activeJourney {
+                        AnimatedCard(delay: 0.3) {
+                            JourneyCard(journey: journey)
+                                .contentShape(Rectangle())
+                                .onTapGesture { vm.showJourneyDetail = true }
                         }
                     }
 
@@ -167,7 +170,12 @@ struct DashboardView: View {
             }
             vm.generateEveningReview(coinVM: coinVM, streakVM: streakVM, journeyVM: journeyVM)
             vm.startAutoRefresh(coinVM: coinVM, streakVM: streakVM)
-            vm.setupNotifications(coinVM: coinVM, streakVM: streakVM)
+        }
+        .onAppear {
+            handleDeepLinkIfNeeded()
+        }
+        .onChange(of: openActiveWalk) { _, _ in
+            handleDeepLinkIfNeeded()
         }
         .onDisappear {
             vm.stopAutoRefresh()
@@ -208,5 +216,10 @@ struct DashboardView: View {
             )
         }
     }
-}
 
+    private func handleDeepLinkIfNeeded() {
+        guard openActiveWalk else { return }
+        openActiveWalk = false
+        vm.showActiveWalk = true
+    }
+}

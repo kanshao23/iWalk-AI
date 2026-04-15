@@ -1,4 +1,5 @@
 import SwiftUI
+import WidgetKit
 
 @Observable
 final class DashboardViewModel {
@@ -57,7 +58,6 @@ final class DashboardViewModel {
 
     private let healthKit = HealthKitManager.shared
     private var refreshTimer: Timer?
-    private var walkEndObserver: NSObjectProtocol?
 
     // MARK: - Auto Refresh (every 30s + foreground)
 
@@ -68,31 +68,22 @@ final class DashboardViewModel {
         }
     }
 
-    func setupNotifications(coinVM: CoinViewModel, streakVM: StreakViewModel) {
-        walkEndObserver = NotificationCenter.default.addObserver(
-            forName: .walkDidEnd,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            self?.refreshFromHealthKit(coinVM: coinVM, streakVM: streakVM)
-        }
+    func setupNotifications() {
+        // No-op now. Walk completion is committed locally first, then refreshed by timer/foreground.
     }
 
     func stopAutoRefresh() {
         refreshTimer?.invalidate()
         refreshTimer = nil
-        if let obs = walkEndObserver {
-            NotificationCenter.default.removeObserver(obs)
-            walkEndObserver = nil
-        }
     }
 
     func refreshFromHealthKit(coinVM: CoinViewModel, streakVM: StreakViewModel) {
         Task {
-            guard healthKit.isAuthorized else { return }
             let steps = await healthKit.fetchTodaySteps()
             let distance = await healthKit.fetchTodayDistance()
             let calories = await healthKit.fetchTodayCalories()
+            let shouldUseRealData = healthKit.hasRequestedAuthorization || steps > 0 || distance > 0 || calories > 0
+            guard shouldUseRealData else { return }
 
             await MainActor.run {
                 todayStats.steps = steps
@@ -117,6 +108,8 @@ final class DashboardViewModel {
                     animatedProgress = targetProgress
                 }
 
+                WidgetCenter.shared.reloadAllTimelines()
+
                 // Check tiers & streak with latest steps
                 coinVM.checkStepTiers(currentSteps: steps)
                 if steps >= 1500 {
@@ -135,16 +128,12 @@ final class DashboardViewModel {
 
     /// Load real data from HealthKit (falls back to mock if unavailable)
     func loadRealData() async {
-        // Try requesting auth if not yet authorized
-        if !healthKit.isAuthorized {
-            _ = await healthKit.requestAuthorization()
-        }
-        guard healthKit.isAuthorized else { return }
-
         let steps = await healthKit.fetchTodaySteps()
         let distance = await healthKit.fetchTodayDistance()
         let calories = await healthKit.fetchTodayCalories()
         let weekly = await healthKit.fetchWeeklySteps()
+        let shouldUseRealData = healthKit.hasRequestedAuthorization || steps > 0 || distance > 0 || calories > 0 || !weekly.isEmpty
+        guard shouldUseRealData else { return }
 
         await MainActor.run {
             hasLoadedRealData = true
@@ -195,7 +184,7 @@ final class DashboardViewModel {
 
     func startWalking() {
         Task {
-            if !healthKit.isAuthorized {
+            if !healthKit.hasRequestedAuthorization {
                 _ = await healthKit.requestAuthorization()
             }
             await MainActor.run {

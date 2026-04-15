@@ -1,9 +1,6 @@
 import SwiftUI
 import CoreMotion
-
-extension Notification.Name {
-    static let walkDidEnd = Notification.Name("iw_walkDidEnd")
-}
+import CoreLocation
 
 @Observable
 final class ActiveWalkViewModel {
@@ -22,6 +19,7 @@ final class ActiveWalkViewModel {
     var showMilestoneToast = false
     var currentMilestone: WalkMilestone?
     private var shownMilestones: Set<String> = []
+    var routePoints: [WalkRoutePoint] = []
 
     // Config
     let dailyGoal: Int
@@ -37,6 +35,21 @@ final class ActiveWalkViewModel {
     private var simulationTimer: Timer? // Only used when pedometer unavailable
     private var elapsedTimer: Timer?
     private var heartRateTimer: Timer?
+    private var liveActivityTick = 0
+
+    // Wall-clock elapsed tracking (survives screen lock)
+    private var walkStartDate: Date?
+    private var pausedDuration: TimeInterval = 0
+    private var pauseStartDate: Date?
+
+    /// Date for `Text(.timer)` in Live Activity: walkStartDate + pausedDuration
+    /// so `now - walkAdjustedStartDate == elapsedSeconds` at any moment.
+    private var walkAdjustedStartDate: Date {
+        (walkStartDate ?? Date()).addingTimeInterval(pausedDuration)
+    }
+
+    // NotificationCenter observer tokens
+    private var observers: [NSObjectProtocol] = []
 
     // Computed
     var totalSteps: Int { stepsBeforeWalk + sessionSteps }
@@ -123,8 +136,21 @@ final class ActiveWalkViewModel {
     // MARK: - Walking
 
     private func beginWalking() {
+        walkStartDate = Date()
         startElapsedTimer()
         startHeartRatePolling()
+        registerURLObservers()
+
+        Task { @MainActor in
+            WalkLiveActivityManager.shared.start(
+                dailyGoal: dailyGoal,
+                totalSteps: totalSteps,
+                distanceKm: sessionDistanceKm,
+                startAdjustedDate: walkAdjustedStartDate,
+                elapsedSeconds: elapsedSeconds
+            )
+        }
+        pushLiveActivityUpdate(force: true)
 
         // Try real pedometer first
         if CMPedometer.isStepCountingAvailable() {
@@ -143,10 +169,14 @@ final class ActiveWalkViewModel {
                 self.sessionSteps = data.numberOfSteps.intValue
                 if let distance = data.distance {
                     self.sessionDistanceKm = distance.doubleValue / 1000.0
+                } else {
+                    // Pedometer doesn't provide distance on this device; estimate from steps
+                    self.sessionDistanceKm = Double(self.sessionSteps) / 1350.0
                 }
                 // Calories: ~0.04 kcal per step (walking average)
                 self.sessionCalories = Int(Double(self.sessionSteps) * 0.04)
                 self.checkMilestones()
+                self.pushLiveActivityUpdate()
             }
         }
     }
@@ -159,14 +189,29 @@ final class ActiveWalkViewModel {
             self.sessionCalories = Int(Double(self.sessionSteps) * 0.04)
             self.sessionDistanceKm = Double(self.sessionSteps) / 1350.0
             self.checkMilestones()
+            self.pushLiveActivityUpdate()
         }
     }
 
     private func startElapsedTimer() {
         elapsedTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
             guard let self else { timer.invalidate(); return }
-            self.elapsedSeconds += 1
+            self.recalculateElapsed()
+            self.pushLiveActivityUpdate()
         }
+        // Catch up after screen lock / foreground return
+        let fgToken = NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.recalculateElapsed()
+        }
+        observers.append(fgToken)
+    }
+
+    private func recalculateElapsed() {
+        guard let start = walkStartDate else { return }
+        elapsedSeconds = max(0, Int(Date().timeIntervalSince(start) - pausedDuration))
     }
 
     private func startHeartRatePolling() {
@@ -194,9 +239,11 @@ final class ActiveWalkViewModel {
     }
 
     func pause() {
+        guard phase == .active else { return }
         withAnimation(.easeInOut(duration: 0.2)) {
             phase = .paused
         }
+        pauseStartDate = Date()
         if usesRealPedometer {
             pedometer.stopUpdates()
         }
@@ -204,9 +251,16 @@ final class ActiveWalkViewModel {
         simulationTimer = nil
         elapsedTimer?.invalidate()
         elapsedTimer = nil
+        pushLiveActivityUpdate(force: true)
     }
 
     func resume() {
+        guard phase == .paused else { return }
+        // Accumulate pause duration so elapsed stays accurate
+        if let pauseStart = pauseStartDate {
+            pausedDuration += Date().timeIntervalSince(pauseStart)
+            pauseStartDate = nil
+        }
         withAnimation(.easeInOut(duration: 0.2)) {
             phase = .active
         }
@@ -216,11 +270,19 @@ final class ActiveWalkViewModel {
         } else {
             startSimulation()
         }
+        pushLiveActivityUpdate(force: true)
     }
 
     func endWalk() {
+        Task { @MainActor in
+            WalkLiveActivityManager.shared.end(
+                totalSteps: totalSteps,
+                distanceKm: sessionDistanceKm,
+                startAdjustedDate: walkAdjustedStartDate,
+                elapsedSeconds: elapsedSeconds
+            )
+        }
         invalidateAll()
-        NotificationCenter.default.post(name: .walkDidEnd, object: nil)
         let session = WalkSession(
             startTime: startTime,
             endTime: .now,
@@ -230,7 +292,8 @@ final class ActiveWalkViewModel {
             elapsedSeconds: elapsedSeconds,
             dailyGoal: dailyGoal,
             stepsBeforeWalk: stepsBeforeWalk,
-            averageHeartRate: currentHeartRate
+            averageHeartRate: currentHeartRate,
+            routePoints: routePoints.isEmpty ? nil : routePoints
         )
         ActiveWalkViewModel.saveSession(session)
         withAnimation(.easeInOut(duration: 0.4)) {
@@ -258,6 +321,21 @@ final class ActiveWalkViewModel {
         }
     }
 
+    private func registerURLObservers() {
+        let pauseToken = NotificationCenter.default.addObserver(
+            forName: .iwPauseResumeWalk, object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            if self.isPaused { self.resume() } else { self.pause() }
+        }
+        let endToken = NotificationCenter.default.addObserver(
+            forName: .iwEndWalk, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.endWalk()
+        }
+        observers.append(contentsOf: [pauseToken, endToken])
+    }
+
     private func invalidateAll() {
         countdownTimer?.invalidate()
         countdownTimer = nil
@@ -269,6 +347,47 @@ final class ActiveWalkViewModel {
         heartRateTimer = nil
         if usesRealPedometer {
             pedometer.stopUpdates()
+        }
+        observers.forEach { NotificationCenter.default.removeObserver($0) }
+        observers.removeAll()
+    }
+
+    private func pushLiveActivityUpdate(force: Bool = false) {
+        liveActivityTick += 1
+        guard force || liveActivityTick % 5 == 0 else { return }
+
+        let paused = phase == .paused
+        let total = totalSteps
+        let distance = sessionDistanceKm
+        let elapsed = elapsedSeconds
+        let adjustedDate = walkAdjustedStartDate
+
+        Task { @MainActor in
+            WalkLiveActivityManager.shared.update(
+                totalSteps: total,
+                distanceKm: distance,
+                startAdjustedDate: adjustedDate,
+                elapsedSeconds: elapsed,
+                isPaused: paused
+            )
+        }
+    }
+
+    func updateRouteCoordinates(_ coordinates: [CLLocationCoordinate2D]) {
+        if coordinates.count < routePoints.count {
+            routePoints.removeAll(keepingCapacity: true)
+        }
+
+        guard coordinates.count > routePoints.count else { return }
+
+        for coordinate in coordinates.suffix(from: routePoints.count) {
+            routePoints.append(
+                WalkRoutePoint(
+                    latitude: coordinate.latitude,
+                    longitude: coordinate.longitude,
+                    timestamp: .now
+                )
+            )
         }
     }
 
@@ -294,4 +413,11 @@ final class ActiveWalkViewModel {
         }
         return history
     }
+}
+
+// MARK: - Notification Names (URL scheme → walk control)
+
+extension Notification.Name {
+    static let iwPauseResumeWalk = Notification.Name("iw.pauseResumeWalk")
+    static let iwEndWalk = Notification.Name("iw.endWalk")
 }

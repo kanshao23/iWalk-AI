@@ -3,13 +3,14 @@ import SwiftUI
 struct MainTabView: View {
     @State private var selectedTab: TabItem = .daily
     @State private var storeKit = StoreKitManager.shared
+    @State private var openActiveWalk = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
             Group {
                 switch selectedTab {
                 case .daily:
-                    DashboardView()
+                    DashboardView(openActiveWalk: $openActiveWalk)
                 case .insights:
                     if storeKit.isPremium {
                         AIInsightsView()
@@ -50,5 +51,19 @@ struct MainTabView: View {
         }
         .background(Color.iwSurface)
         .ignoresSafeArea(edges: .bottom)
+        .onOpenURL { url in
+            guard url.scheme?.lowercased() == "iwalkai" else { return }
+            switch url.host {
+            case "active-walk":
+                selectedTab = .daily
+                openActiveWalk = true
+            case "pause-walk":
+                NotificationCenter.default.post(name: .iwPauseResumeWalk, object: nil)
+            case "end-walk":
+                NotificationCenter.default.post(name: .iwEndWalk, object: nil)
+            default:
+                break
+            }
+        }
     }
 }
