@@ -176,7 +176,9 @@ final class ActiveWalkViewModel {
                 // Calories: ~0.04 kcal per step (walking average)
                 self.sessionCalories = Int(Double(self.sessionSteps) * 0.04)
                 self.checkMilestones()
-                self.pushLiveActivityUpdate()
+                // Always push on real step data — pedometer is infrequent and
+                // continues in background, so we want every update reflected immediately.
+                self.pushLiveActivityUpdate(force: true)
             }
         }
     }
@@ -196,8 +198,9 @@ final class ActiveWalkViewModel {
     private func startElapsedTimer() {
         elapsedTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
             guard let self else { timer.invalidate(); return }
+            // Only update in-app elapsed display. Live Activity time is handled by
+            // Text(.timer) which auto-ticks without app pushes.
             self.recalculateElapsed()
-            self.pushLiveActivityUpdate()
         }
         // Catch up after screen lock / foreground return
         let fgToken = NotificationCenter.default.addObserver(
