@@ -17,12 +17,10 @@ struct TieredProgressBar: View {
         return min(max(stepsMax, hiddenMax), hiddenMax)
     }
 
-    // Visible area shows exactly 0..goalSteps.
-    // Goal flag lands at the right edge of the initial viewport, and
-    // Now's x position becomes screenWidth * expectedProgress — a direct
-    // linear mapping from time of day to screen position.
+    // Visible area shows 0..goalSteps * 1.15 so the goal flag sits at ~87%
+    // of the screen width, fully visible without scrolling.
     private var visibleSteps: Int {
-        goalSteps
+        Int(Double(goalSteps) * 1.15)
     }
 
     private func scrollScale(screenWidth: CGFloat) -> CGFloat {
@@ -41,11 +39,6 @@ struct TieredProgressBar: View {
         let minutesSince7am = (hour - 7) * 60 + minute
         let wakingMinutes = 16 * 60
         return min(max(Double(minutesSince7am) / Double(wakingMinutes), 0), 1.0)
-    }
-
-    /// 当前时刻对应的"预期步数"（用于在轨道上定位 Now 圆点）
-    private var expectedSteps: Int {
-        Int(expectedProgress * Double(goalSteps))
     }
 
     private var isAheadOfSchedule: Bool {
@@ -183,8 +176,8 @@ struct TieredProgressBar: View {
                                     .frame(width: filledWidth, height: 14)
                             }
 
-                            // Time-based "Now" indicator
-                            let nowX = xPosition(for: expectedSteps, in: contentWidth)
+                            // Time-based "Now" indicator — maps directly from time of day to screen position
+                            let nowX = screenWidth * CGFloat(expectedProgress)
                             Text("Now")
                                 .font(.system(size: 13, weight: .bold, design: .rounded))
                                 .foregroundStyle(Color.iwTertiary)
