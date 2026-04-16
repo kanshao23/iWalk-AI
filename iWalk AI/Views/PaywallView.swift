@@ -18,7 +18,7 @@ struct PaywallView: View {
                             .font(IWFont.labelMedium())
                             .foregroundStyle(Color.iwOutline)
                         Spacer()
-                        Button { handleDismiss() } label: {
+                        Button { dismiss() } label: {
                             Image(systemName: "xmark")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(Color.iwOutline)
@@ -183,30 +183,17 @@ struct PaywallView: View {
                         Link("Privacy Policy", destination: URL(string: "https://www.kanverse.app/iwalk-ai/privacy")!)
                             .font(IWFont.labelSmall())
                             .foregroundStyle(Color.iwOutline)
+                        Text("·")
+                            .foregroundStyle(Color.iwOutlineVariant)
+                        Link("Support", destination: URL(string: "https://kanverse.app/iwalk-ai")!)
+                            .font(IWFont.labelSmall())
+                            .foregroundStyle(Color.iwOutline)
                     }
                     .padding(.top, 12)
                     .padding(.bottom, 32)
                 }
             }
 
-            // Retention offer overlay
-            if vm.showRetentionOffer {
-                RetentionOfferView(
-                    price: vm.retentionPrice,
-                    onAccept: {
-                        vm.showRetentionOffer = false
-                        Task {
-                            let success = await vm.purchase()
-                            if success { dismiss() }
-                        }
-                    },
-                    onDecline: {
-                        vm.declineRetention()
-                        dismiss()
-                    }
-                )
-                .transition(.opacity)
-            }
         }
         .onAppear {
             withAnimation(.easeOut(duration: 0.6)) {
@@ -222,22 +209,9 @@ struct PaywallView: View {
         let price = vm.displayPrice(for: vm.selectedPlan)
         switch vm.selectedPlan {
         case .weekly:
-            return "Billed \(price) every week. Cancel anytime in Settings."
+            return "After your 7-day free trial, \(price)/week is charged to your Apple ID. Renews automatically. Cancel anytime in App Store Settings."
         case .yearly:
-            return "Billed \(price) per year. Cancel anytime in Settings."
-        }
-    }
-
-    private func handleDismiss() {
-        if vm.showRetentionOffer {
-            vm.declineRetention()
-            dismiss()
-        } else {
-            vm.dismiss()
-            // If retention wasn't triggered (already shown or premium), dismiss immediately
-            if !vm.showRetentionOffer {
-                dismiss()
-            }
+            return "After your 7-day free trial, \(price)/year is charged to your Apple ID. Renews automatically. Cancel anytime in App Store Settings."
         }
     }
 }
@@ -301,69 +275,3 @@ private struct PricingCard: View {
     }
 }
 
-// MARK: - Retention Offer
-
-private struct RetentionOfferView: View {
-    let price: String
-    let onAccept: () -> Void
-    let onDecline: () -> Void
-
-    @State private var appeared = false
-
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.5)
-                .ignoresSafeArea()
-                .onTapGesture { onDecline() }
-
-            VStack(spacing: 20) {
-                Image(systemName: "gift.fill")
-                    .font(.system(size: 36))
-                    .foregroundStyle(Color.iwPrimaryContainer)
-
-                Text("Wait — special offer!")
-                    .font(IWFont.titleLarge())
-                    .foregroundStyle(Color.iwOnSurface)
-
-                Text("Get a full year of iWalk AI Premium for just \(price). That's our best deal ever.")
-                    .font(IWFont.bodyMedium())
-                    .foregroundStyle(Color.iwOutline)
-                    .multilineTextAlignment(.center)
-
-                VStack(spacing: 10) {
-                    Button(action: onAccept) {
-                        Text("Claim \(price)")
-                            .font(IWFont.labelLarge())
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color.iwPrimaryGradient)
-                            .clipShape(Capsule())
-                    }
-
-                    Button(action: onDecline) {
-                        Text("No thanks, continue for free")
-                            .font(IWFont.labelMedium())
-                            .foregroundStyle(Color.iwOutline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.iwSurfaceContainerHigh)
-                            .clipShape(Capsule())
-                    }
-                }
-            }
-            .padding(28)
-            .background(Color.iwSurfaceContainerLowest)
-            .clipShape(RoundedRectangle(cornerRadius: 28))
-            .padding(.horizontal, 28)
-            .scaleEffect(appeared ? 1 : 0.85)
-            .opacity(appeared ? 1 : 0)
-        }
-        .onAppear {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                appeared = true
-            }
-        }
-    }
-}

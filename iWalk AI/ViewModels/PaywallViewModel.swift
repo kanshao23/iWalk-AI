@@ -56,24 +56,20 @@ enum PricingPlan: String, CaseIterable, Identifiable {
 @Observable
 final class PaywallViewModel {
     var selectedPlan: PricingPlan = .yearly
-    var showRetentionOffer = false
-    var retentionPrice = "$29.99/year"
     var purchaseError: String?
-
-    private let hasShownRetentionKey = "iw_has_shown_retention"
 
     var isPurchasing: Bool { StoreKitManager.shared.isLoading }
     var isPremium: Bool { StoreKitManager.shared.isPremium }
 
     let features: [(icon: String, title: String, description: String)] = [
-        ("brain.head.profile", "AI Health Insights", "Personalized health analysis powered by AI"),
-        ("figure.walk", "Smart Walking Coach", "Real-time coaching that adapts to your pace"),
-        ("chart.line.uptrend.xyaxis", "Advanced Analytics", "Deep health trends and projections"),
-        ("trophy.fill", "Challenges & Badges", "Compete with friends and earn achievements"),
-        ("heart.text.clipboard", "Health Reports", "Weekly AI-generated wellness reports"),
+        ("figure.walk", "Step Tiers & Coin Rewards", "Hit 5 daily step tiers and earn iWalk Coins instantly"),
+        ("map.fill", "Virtual Journey", "Walk New York to Los Angeles — 4,500 km across America"),
+        ("brain.head.profile", "AI Walking Coach", "Personalized daily advice based on your real step progress"),
+        ("flame.fill", "Streak Protection", "Earn freeze cards every 7 days to protect your streak"),
+        ("trophy.fill", "Badges & Milestones", "Unlock achievements at 7, 14, 30, 60 and 100-day streaks"),
     ]
 
-    let socialProof = "Track smarter. Walk further. Feel better."
+    let socialProof = "Every step earns a reward."
 
     /// Returns the StoreKit-formatted price for a plan, falling back to the hardcoded value.
     func displayPrice(for plan: PricingPlan) -> String {
@@ -108,17 +104,4 @@ final class PaywallViewModel {
         }
     }
 
-    func dismiss() {
-        let hasShown = UserDefaults.standard.bool(forKey: hasShownRetentionKey)
-        if !hasShown && !isPremium {
-            UserDefaults.standard.set(true, forKey: hasShownRetentionKey)
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                showRetentionOffer = true
-            }
-        }
-    }
-
-    func declineRetention() {
-        showRetentionOffer = false
-    }
 }

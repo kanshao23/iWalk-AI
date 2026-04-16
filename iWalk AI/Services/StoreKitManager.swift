@@ -13,13 +13,22 @@ final class StoreKitManager {
 
     private let productIDs = ["kanshaous.iwalk.weekly", "kanshaous.iwalk.yearly"]
     private var transactionListenerTask: Task<Void, Error>?
+    private let subscriptionFlagKey = "hasSubscribed"
 
     private init() {
         transactionListenerTask = listenForTransactions()
+        Task { await refreshEntitlements() }
     }
 
+    #if DEBUG
+    var debugUnlockPro = false
+    #endif
+
     var isPremium: Bool {
-        !purchasedProductIDs.isEmpty
+        #if DEBUG
+        if debugUnlockPro { return true }
+        #endif
+        return !purchasedProductIDs.isEmpty
     }
 
     func loadProducts() async {
@@ -72,6 +81,10 @@ final class StoreKitManager {
         isLoading = false
     }
 
+    func refreshEntitlements() async {
+        await updatePurchasedProducts()
+    }
+
     private func listenForTransactions() -> Task<Void, Error> {
         Task.detached {
             for await result in Transaction.updates {
@@ -93,6 +106,7 @@ final class StoreKitManager {
             }
         }
         purchasedProductIDs = purchased
+        UserDefaults.standard.set(!purchased.isEmpty, forKey: subscriptionFlagKey)
     }
 
     private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
