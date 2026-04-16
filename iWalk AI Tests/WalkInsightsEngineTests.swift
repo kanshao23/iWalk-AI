@@ -84,4 +84,31 @@ final class WalkInsightsEngineTests: XCTestCase {
         let history = (0..<3).map { makeSession(startHour: 20, daysAgo: $0) }
         XCTAssertEqual(WalkInsightsEngine.bestTimeOfDay(from: history), .evening)
     }
+
+    // MARK: - weekComparison
+
+    func test_weekComparison_countsThisWeekAndLastWeek() {
+        // 2 walks today = this week; 1 walk 8 days ago = last week
+        let thisWeek = (0..<2).map { _ in makeSession(daysAgo: 0) }
+        let lastWeek = [makeSession(daysAgo: 8)]
+        let result = WalkInsightsEngine.weekComparison(from: thisWeek + lastWeek)
+        XCTAssertEqual(result.thisWeekWalks, 2)
+        XCTAssertEqual(result.lastWeekWalks, 1)
+    }
+
+    func test_weekComparison_stepsAccumulate() {
+        // 2 walks this week, each 3.0 km → steps = Int(3.0 * 1350) = 4050 each
+        let history = (0..<2).map { makeSession(daysAgo: $0, distanceKm: 3.0) }
+        let result = WalkInsightsEngine.weekComparison(from: history)
+        XCTAssertEqual(result.thisWeekSteps, 4050 * 2)
+        XCTAssertEqual(result.lastWeekSteps, 0)
+    }
+
+    func test_weekComparison_emptyHistoryReturnsZeros() {
+        let result = WalkInsightsEngine.weekComparison(from: [])
+        XCTAssertEqual(result.thisWeekWalks, 0)
+        XCTAssertEqual(result.lastWeekWalks, 0)
+        XCTAssertEqual(result.thisWeekSteps, 0)
+        XCTAssertEqual(result.lastWeekSteps, 0)
+    }
 }

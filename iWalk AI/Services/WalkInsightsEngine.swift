@@ -66,4 +66,28 @@ struct WalkInsightsEngine {
               winner.value >= 3 else { return .unknown }
         return winner.key
     }
+
+    /// Groups sessions into the current and previous calendar week (weekOfYear).
+    static func weekComparison(from history: [WalkSession]) -> WeekComparison {
+        let cal = Calendar.current
+        let now = Date()
+        guard let thisWeekInterval = cal.dateInterval(of: .weekOfYear, for: now) else {
+            return WeekComparison(thisWeekWalks: 0, lastWeekWalks: 0,
+                                  thisWeekSteps: 0, lastWeekSteps: 0)
+        }
+        let lastWeekStart = cal.date(byAdding: .weekOfYear, value: -1,
+                                     to: thisWeekInterval.start)!
+
+        let thisWeek = history.filter { thisWeekInterval.contains($0.startTime) }
+        let lastWeek = history.filter {
+            $0.startTime >= lastWeekStart && $0.startTime < thisWeekInterval.start
+        }
+
+        return WeekComparison(
+            thisWeekWalks: thisWeek.count,
+            lastWeekWalks: lastWeek.count,
+            thisWeekSteps: thisWeek.map(\.steps).reduce(0, +),
+            lastWeekSteps: lastWeek.map(\.steps).reduce(0, +)
+        )
+    }
 }
