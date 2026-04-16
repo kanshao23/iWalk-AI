@@ -45,4 +45,25 @@ struct WalkInsightsEngine {
         if change >  0.05 { return .declining }
         return .stable
     }
+
+    /// Returns the time bracket with ≥3 walks. Returns .unknown if none qualifies or total < 3.
+    static func bestTimeOfDay(from history: [WalkSession]) -> TimeOfDay {
+        guard history.count >= 3 else { return .unknown }
+
+        var counts: [TimeOfDay: Int] = [.morning: 0, .afternoon: 0, .evening: 0]
+        let cal = Calendar.current
+        for session in history {
+            let hour = cal.component(.hour, from: session.startTime)
+            switch hour {
+            case 5..<12:  counts[.morning,   default: 0] += 1
+            case 12..<18: counts[.afternoon, default: 0] += 1
+            case 18..<24: counts[.evening,   default: 0] += 1
+            default: break
+            }
+        }
+
+        guard let winner = counts.max(by: { $0.value < $1.value }),
+              winner.value >= 3 else { return .unknown }
+        return winner.key
+    }
 }

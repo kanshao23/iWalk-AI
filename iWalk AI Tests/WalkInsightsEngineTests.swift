@@ -58,4 +58,30 @@ final class WalkInsightsEngineTests: XCTestCase {
         let history = (0..<5).map { makeSession(daysAgo: $0) }
         XCTAssertEqual(WalkInsightsEngine.paceTrend(from: history), .stable)
     }
+
+    // MARK: - bestTimeOfDay
+
+    func test_bestTimeOfDay_morning_when4MorningAnd1Afternoon() {
+        let history = (0..<4).map { makeSession(startHour: 8,  daysAgo: $0) }
+                   + [makeSession(startHour: 14, daysAgo: 4)]
+        XCTAssertEqual(WalkInsightsEngine.bestTimeOfDay(from: history), .morning)
+    }
+
+    func test_bestTimeOfDay_unknown_whenNoBracketHas3OrMore() {
+        // 2 morning, 2 afternoon, 1 evening — no bracket has ≥3
+        let history = (0..<2).map { makeSession(startHour: 8,  daysAgo: $0) }
+                   + (2..<4).map { makeSession(startHour: 14, daysAgo: $0) }
+                   + [makeSession(startHour: 20, daysAgo: 4)]
+        XCTAssertEqual(WalkInsightsEngine.bestTimeOfDay(from: history), .unknown)
+    }
+
+    func test_bestTimeOfDay_unknown_whenFewerThan3TotalWalks() {
+        let history = (0..<2).map { makeSession(startHour: 8, daysAgo: $0) }
+        XCTAssertEqual(WalkInsightsEngine.bestTimeOfDay(from: history), .unknown)
+    }
+
+    func test_bestTimeOfDay_evening_when3EveningWalks() {
+        let history = (0..<3).map { makeSession(startHour: 20, daysAgo: $0) }
+        XCTAssertEqual(WalkInsightsEngine.bestTimeOfDay(from: history), .evening)
+    }
 }
