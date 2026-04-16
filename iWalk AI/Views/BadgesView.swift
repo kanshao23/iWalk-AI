@@ -277,18 +277,16 @@ private struct AppSettingsSheet: View {
                     HStack {
                         Text("HealthKit access")
                         Spacer()
-                        Text(healthKit.isAuthorized ? "Connected" : "Not connected")
-                            .foregroundStyle(healthKit.isAuthorized ? Color.iwPrimary : Color.iwOutline)
+                        Text(healthKit.hasRequestedAuthorization ? "Permission requested" : "Not requested")
+                            .foregroundStyle(healthKit.hasRequestedAuthorization ? Color.iwPrimary : Color.iwOutline)
                     }
 
-                    if !healthKit.isAuthorized {
-                        Button {
-                            requestHealthKitAccess()
-                        } label: {
-                            Label("Connect HealthKit", systemImage: "heart.text.square")
-                        }
-                        .disabled(isRequestingHealthAccess)
+                    Button {
+                        requestHealthKitAccess()
+                    } label: {
+                        Label("Request Health Access", systemImage: "heart.text.square")
                     }
+                    .disabled(isRequestingHealthAccess)
 
                     Button {
                         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
@@ -321,16 +319,47 @@ private struct AppSettingsSheet: View {
                             .foregroundStyle(Color.iwOutline)
                     }
                     HStack {
-                        Text("Build")
+                        Text("Version")
                         Spacer()
-                        Text("Beta")
+                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
                             .foregroundStyle(Color.iwOutline)
                     }
+                    Button {
+                        guard let url = URL(string: "https://kanverse.app/iwalk-ai") else { return }
+                        openURL(url)
+                    } label: {
+                        Label("Help & Support", systemImage: "questionmark.circle")
+                    }
+                    Button {
+                        guard let url = URL(string: "https://www.kanverse.app/iwalk-ai/privacy") else { return }
+                        openURL(url)
+                    } label: {
+                        Label("Privacy Policy", systemImage: "lock.shield")
+                    }
+                    Button {
+                        guard let url = URL(string: "https://www.kanverse.app/iwalk-ai/terms") else { return }
+                        openURL(url)
+                    } label: {
+                        Label("Terms of Service", systemImage: "doc.text")
+                    }
                 }
+
+                #if DEBUG
+                Section(header: Text("⚙️ Debug").foregroundStyle(.orange)) {
+                    Toggle(isOn: Binding(
+                        get: { StoreKitManager.shared.debugUnlockPro },
+                        set: { StoreKitManager.shared.debugUnlockPro = $0 }
+                    )) {
+                        Label("Unlock Pro (Debug)", systemImage: "lock.open.fill")
+                    }
+                    .tint(.orange)
+                }
+                #endif
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .background(Color.iwSurface)
+            .tint(Color.iwPrimary)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -381,12 +410,12 @@ private struct AppSettingsSheet: View {
         guard !isRequestingHealthAccess else { return }
         isRequestingHealthAccess = true
         Task {
-            _ = await healthKit.requestAuthorization()
+            let granted = await healthKit.requestAuthorization()
             await MainActor.run {
                 isRequestingHealthAccess = false
-                actionFeedback = healthKit.isAuthorized
-                ? "HealthKit connected successfully."
-                : "HealthKit authorization was not granted."
+                actionFeedback = granted
+                    ? "Health access request completed. If you allowed it, data will refresh shortly."
+                    : "Health access wasn't granted. You can try again anytime."
             }
         }
     }
