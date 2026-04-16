@@ -11,6 +11,12 @@ final class WalkLiveActivityManager {
 
     private init() {}
 
+    /// True when a walk Live Activity is currently running (either in this session or an orphaned one).
+    var isActive: Bool {
+        guard #available(iOS 16.2, *) else { return false }
+        return activity != nil || !Activity<WalkActivityAttributes>.activities.isEmpty
+    }
+
     func start(dailyGoal: Int, totalSteps: Int, distanceKm: Double,
                startAdjustedDate: Date, elapsedSeconds: Int) {
         guard #available(iOS 16.2, *) else { return }

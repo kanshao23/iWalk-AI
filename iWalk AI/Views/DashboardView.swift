@@ -71,9 +71,15 @@ struct DashboardView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 20))
                     }
 
-                    // Start Walking Button (always visible)
-                    PillButton("Start Walking Now", icon: "figure.walk") {
-                        vm.startWalking()
+                    // Walk button — shows resume state if app was killed during a walk
+                    if vm.hasOrphanedWalk {
+                        PillButton("Walk in Progress — Tap to Return", icon: "figure.walk.motion") {
+                            vm.showActiveWalk = true
+                        }
+                    } else {
+                        PillButton("Start Walking Now", icon: "figure.walk") {
+                            vm.startWalking()
+                        }
                     }
 
                     // Evening Review (only after 8 pm, when data is ready)

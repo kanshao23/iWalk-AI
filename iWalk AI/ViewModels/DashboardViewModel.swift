@@ -202,12 +202,26 @@ final class DashboardViewModel {
         }
     }
 
+    /// True when a walk Live Activity is running but the in-app walk view is not currently presented.
+    /// This happens when the app was killed and relaunched via the Live Activity banner.
+    var hasOrphanedWalk: Bool {
+        !showActiveWalk && WalkLiveActivityManager.shared.isActive
+    }
+
     func startWalking() {
         Task {
             if !healthKit.hasRequestedAuthorization {
                 _ = await healthKit.requestAuthorization()
             }
+            // Fetch the latest step count so stepsBeforeWalk is accurate when the
+            // walk ViewModel is created. Avoids the Live Activity showing 0 steps
+            // at the start of each walk when HealthKit data hasn't loaded yet.
+            let freshSteps = await healthKit.fetchTodaySteps()
             await MainActor.run {
+                if freshSteps > todayStats.steps {
+                    todayStats.steps = freshSteps
+                    animatedSteps = freshSteps
+                }
                 showActiveWalk = true
             }
         }
