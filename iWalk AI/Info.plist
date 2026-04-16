@@ -8,5 +8,18 @@
 	<string>iWalk AI reads your step count, distance, calories, and heart rate to track your walking progress and provide personalized insights.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>iWalk AI shows your location on the map during walks to track your route.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>iwalkai</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+	<true/>
 </dict>
 </plist>

@@ -1,0 +1,18 @@
+port: 3000
+defaults:
+  runtime: tmux
+  agent: claude-code
+  workspace: worktree
+  notifiers: []
+projects:
+  iWalk-AI:
+    name: iWalk AI
+    sessionPrefix: wai
+    repo: kanshao23/iWalk-AI
+    path: /Users/kanshao/dev/iWalk AI
+    defaultBranch: main
+    agentRules: |-
+      Always run tests before pushing.
+      Use conventional commits (feat:, fix:, chore:, docs:, refactor:, test:).
+      Link issue numbers in commit messages.
+      Write clear commit messages that explain WHY, not just WHAT.

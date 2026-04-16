@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## Project Overview
 
@@ -16,7 +16,7 @@ xcodebuild build \
   -project "iWalk AI.xcodeproj" \
   -scheme "iWalk AI" \
   -destination "platform=iOS Simulator,name=iPhone 17 Pro" \
-  2>&1 | xcbeautify --quiet --disable-colored-output
+  2>&1 | xcbeautify --quiet
 
 # Run on simulator
 UDID=$(xcrun simctl list devices | grep "iPhone 17 Pro" | grep -v "Plus\|Max" | head -1 | grep -oE "[A-F0-9-]{36}")

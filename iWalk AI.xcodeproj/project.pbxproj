@@ -18,6 +18,13 @@
 			remoteGlobalIDString = C4A100092F900001009567E7;
 			remoteInfo = "iWalk AI Widgets";
 		};
+		C4B2000A2F900001009567E7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C480288E2F7652BD009567E7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C48028952F7652BD009567E7;
+			remoteInfo = "iWalk AI";
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -37,6 +44,7 @@
 /* Begin PBXFileReference section */
 		C48028962F7652BD009567E7 /* iWalk AI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "iWalk AI.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C4A100012F900001009567E7 /* iWalk AI Widgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "iWalk AI Widgets.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C4B200012F900001009567E7 /* iWalk AI Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "iWalk AI Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -73,6 +81,11 @@
 			path = "iWalk AI Widgets";
 			sourceTree = "<group>";
 		};
+		C4B200022F900001009567E7 /* iWalk AI Tests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "iWalk AI Tests";
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,6 +103,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C4B200062F900001009567E7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -98,6 +118,7 @@
 			children = (
 				C48028982F7652BD009567E7 /* iWalk AI */,
 				C4A100042F900001009567E7 /* iWalk AI Widgets */,
+				C4B200022F900001009567E7 /* iWalk AI Tests */,
 				C48028972F7652BD009567E7 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -107,6 +128,7 @@
 			children = (
 				C48028962F7652BD009567E7 /* iWalk AI.app */,
 				C4A100012F900001009567E7 /* iWalk AI Widgets.appex */,
+				C4B200012F900001009567E7 /* iWalk AI Tests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -160,6 +182,28 @@
 			productReference = C4A100012F900001009567E7 /* iWalk AI Widgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		C4B200092F900001009567E7 /* iWalk AI Tests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C4B2000E2F900001009567E7 /* Build configuration list for PBXNativeTarget "iWalk AI Tests" */;
+			buildPhases = (
+				C4B200052F900001009567E7 /* Sources */,
+				C4B200062F900001009567E7 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C4B2000B2F900001009567E7 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				C4B200022F900001009567E7 /* iWalk AI Tests */,
+			);
+			name = "iWalk AI Tests";
+			packageProductDependencies = (
+			);
+			productName = "iWalk AI Tests";
+			productReference = C4B200012F900001009567E7 /* iWalk AI Tests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -174,6 +218,9 @@
 						CreatedOnToolsVersion = 26.4;
 					};
 					C4A100092F900001009567E7 = {
+						CreatedOnToolsVersion = 26.4;
+					};
+					C4B200092F900001009567E7 = {
 						CreatedOnToolsVersion = 26.4;
 					};
 				};
@@ -194,6 +241,7 @@
 			targets = (
 				C48028952F7652BD009567E7 /* iWalk AI */,
 				C4A100092F900001009567E7 /* iWalk AI Widgets */,
+				C4B200092F900001009567E7 /* iWalk AI Tests */,
 			);
 		};
 /* End PBXProject section */
@@ -230,6 +278,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C4B200052F900001009567E7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -237,6 +292,11 @@
 			isa = PBXTargetDependency;
 			target = C4A100092F900001009567E7 /* iWalk AI Widgets */;
 			targetProxy = C4A1000A2F900001009567E7 /* PBXContainerItemProxy */;
+		};
+		C4B2000B2F900001009567E7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C48028952F7652BD009567E7 /* iWalk AI */;
+			targetProxy = C4B2000A2F900001009567E7 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -484,6 +544,52 @@
 			};
 			name = Release;
 		};
+		C4B2000C2F900001009567E7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = X332YRW558;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "kanshaous.iWalk-AI.Tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/iWalk AI.app/iWalk AI";
+			};
+			name = Debug;
+		};
+		C4B2000D2F900001009567E7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = X332YRW558;
+				ENABLE_TESTING_SEARCH_PATHS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "kanshaous.iWalk-AI.Tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/iWalk AI.app/iWalk AI";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -510,6 +616,15 @@
 			buildConfigurations = (
 				C4A1000C2F900001009567E7 /* Debug */,
 				C4A1000D2F900001009567E7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C4B2000E2F900001009567E7 /* Build configuration list for PBXNativeTarget "iWalk AI Tests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C4B2000C2F900001009567E7 /* Debug */,
+				C4B2000D2F900001009567E7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
