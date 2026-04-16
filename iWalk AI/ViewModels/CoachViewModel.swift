@@ -79,24 +79,32 @@ final class CoachViewModel {
     func refreshContext(streak: StreakData) async {
         self.streak = streak
 
-        guard healthKit.isAuthorized else {
-            hasRealActivityData = false
-            if weeklyActivity.isEmpty {
-                weeklyActivity = DailyStats.mockWeek
-            }
-            refreshRecommendations()
-            return
-        }
-
         async let fetchedSteps = healthKit.fetchTodaySteps()
         async let fetchedWeekly = healthKit.fetchWeeklySteps()
         async let fetchedHeartRate = healthKit.fetchLatestHeartRate()
 
-        todaySteps = await fetchedSteps
+        let steps = await fetchedSteps
         let weekly = await fetchedWeekly
-        weeklyActivity = weekly.isEmpty ? weeklyActivity : weekly
-        latestHeartRate = await fetchedHeartRate
-        hasRealActivityData = true
+        let heartRate = await fetchedHeartRate
+        let shouldUseRealData = HealthDataPresence.hasCoachRealData(
+            steps: steps,
+            weeklyCount: weekly.count,
+            heartRate: heartRate
+        )
+        guard shouldUseRealData else {
+            todaySteps = DailyStats.mockToday.steps
+            weeklyActivity = DailyStats.mockWeek
+            latestHeartRate = nil
+            hasRealActivityData = false
+            refreshRecommendations()
+            refreshDynamicSuggestions()
+            return
+        }
+
+        todaySteps = steps
+        latestHeartRate = heartRate
+        weeklyActivity = weekly
+        hasRealActivityData = todaySteps > 0 || !weekly.isEmpty || latestHeartRate != nil
         refreshRecommendations()
         refreshDynamicSuggestions()
     }
@@ -140,7 +148,19 @@ final class CoachViewModel {
                 reply = try await apiClient.sendMessage(history: apiHistory, context: context)
             } catch {
                 // Graceful local fallback
-                reply = generateResponse(for: userText)
+                let fallback = generateResponse(for: userText)
+                switch error {
+                case CoachAPIError.invalidResponseStatus(let statusCode):
+                    reply = "Coach is temporarily unavailable (status \(statusCode)), so here's a quick tip based on your latest activity. " + fallback
+                case CoachAPIError.invalidPayload:
+                    reply = "Coach returned an unexpected response, so here's a quick tip based on your latest activity. " + fallback
+                case let urlError as URLError:
+                    print("[CoachVM] URLError \(urlError.code.rawValue): \(urlError.localizedDescription)")
+                    reply = "Network connection seems unstable, so here's a quick tip based on your latest activity. " + fallback
+                default:
+                    print("[CoachVM] Unhandled error: \(type(of: error)) | \(error)")
+                    reply = fallback
+                }
             }
 
             withAnimation(.easeInOut(duration: 0.3)) {
