@@ -1,6 +1,5 @@
 import WidgetKit
 import SwiftUI
-import HealthKit
 
 // MARK: - Data Model
 
@@ -27,63 +26,44 @@ struct WalkSummaryProvider: TimelineProvider {
     func placeholder(in context: Context) -> WalkDailyEntry { .placeholder }
 
     func getSnapshot(in context: Context, completion: @escaping (WalkDailyEntry) -> Void) {
-        completion(.placeholder)
+        completion(WidgetSummaryStore.loadEntry() ?? .placeholder)
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<WalkDailyEntry>) -> Void) {
-        Task {
-            let steps    = await WidgetHealthKit.fetchSteps()
-            let distance = await WidgetHealthKit.fetchDistance()
-            let calories = await WidgetHealthKit.fetchCalories()
-
-            let entry = WalkDailyEntry(
-                date: .now,
-                steps: steps,
-                distanceKm: distance,
-                calories: calories,
-                dailyGoal: 10000
-            )
-            let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: .now) ?? .now
-            completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
-        }
+        let entry = WidgetSummaryStore.loadEntry() ?? .placeholder
+        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: .now) ?? .now
+        completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
     }
 }
 
-// MARK: - Lightweight HealthKit (widget-local, no heavy imports)
+private enum WidgetSummaryStore {
+    private static let suiteName = "group.kanshaous.iWalkAI"
+    private static let snapshotKey = "iw_widget_summary_snapshot_v1"
 
-private enum WidgetHealthKit {
-    static func fetchSteps() async -> Int {
-        Int(await fetch(.stepCount, unit: .count()))
-    }
+    static func loadEntry() -> WalkDailyEntry? {
+        guard let defaults = UserDefaults(suiteName: suiteName),
+              let data = defaults.data(forKey: snapshotKey),
+              let snapshot = try? JSONDecoder().decode(WidgetSummarySnapshot.self, from: data)
+        else { return nil }
 
-    static func fetchDistance() async -> Double {
-        await fetch(.distanceWalkingRunning, unit: .meterUnit(with: .kilo))
-    }
+        guard Calendar.current.isDate(snapshot.updatedAt, inSameDayAs: .now) else { return nil }
 
-    static func fetchCalories() async -> Int {
-        Int(await fetch(.activeEnergyBurned, unit: .kilocalorie()))
-    }
-
-    private static func fetch(_ id: HKQuantityTypeIdentifier, unit: HKUnit) async -> Double {
-        let store = HKHealthStore()
-        guard HKHealthStore.isHealthDataAvailable(),
-              let type = HKQuantityType.quantityType(forIdentifier: id)
-        else { return 0 }
-
-        let start = Calendar.current.startOfDay(for: .now)
-        let predicate = HKQuery.predicateForSamples(
-            withStart: start, end: .now, options: .strictStartDate
+        return WalkDailyEntry(
+            date: snapshot.updatedAt,
+            steps: snapshot.steps,
+            distanceKm: snapshot.distanceKm,
+            calories: snapshot.calories,
+            dailyGoal: snapshot.dailyGoal
         )
-        return await withCheckedContinuation { continuation in
-            store.execute(HKStatisticsQuery(
-                quantityType: type,
-                quantitySamplePredicate: predicate,
-                options: .cumulativeSum
-            ) { _, result, _ in
-                continuation.resume(returning: result?.sumQuantity()?.doubleValue(for: unit) ?? 0)
-            })
-        }
     }
+}
+
+private struct WidgetSummarySnapshot: Codable {
+    let updatedAt: Date
+    let steps: Int
+    let distanceKm: Double
+    let calories: Int
+    let dailyGoal: Int
 }
 
 // MARK: - Widget Configuration
@@ -147,14 +127,29 @@ private struct SmallWalkWidget: View {
 
                 Spacer().frame(height: 5)
 
-                Text("\(Int(entry.progress * 100))% of \(entry.dailyGoal.formatted()) goal")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.45))
+                HStack(alignment: .bottom) {
+                    Text("\(Int(entry.progress * 100))% of goal")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.45))
+
+                    Spacer()
+
+                    // 点击此按钮开始走路，点击 widget 其他区域打开 App
+                    Link(destination: URL(string: "iwalkai://active-walk")!) {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.black)
+                            .frame(width: 28, height: 28)
+                            .background(.green)
+                            .clipShape(Circle())
+                    }
+                }
             }
             .padding(14)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .widgetURL(URL(string: "iwalkai://active-walk"))
+        // 点击 widget 背景区域 → 打开 App 主界面
+        .widgetURL(URL(string: "iwalkai://home"))
         .containerBackground(for: .widget) { Color(widgetHex: "0F1923") }
     }
 }
