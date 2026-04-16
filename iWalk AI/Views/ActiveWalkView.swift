@@ -47,7 +47,10 @@ final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDe
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last, location.horizontalAccuracy >= 0 else { return }
+        // Reject readings with poor accuracy (> 20m) — common at GPS startup
+        guard let location = locations.last,
+              location.horizontalAccuracy >= 0,
+              location.horizontalAccuracy <= 20 else { return }
 
         DispatchQueue.main.async {
             self.currentCoordinate = location.coordinate
@@ -436,6 +439,37 @@ private struct WalkSummaryContent: View {
                     .frame(width: 160, height: 160)
                 }
 
+                // Route map (only if GPS was tracked)
+                if let points = session.routePoints, points.count >= 2 {
+                    let coords = points.map(\.clLocation)
+                    Map(initialPosition: .region(routeRegion(for: coords))) {
+                        MapPolyline(coordinates: coords)
+                            .stroke(Color.iwPrimary, lineWidth: 4)
+                        if let first = coords.first {
+                            Annotation("Start", coordinate: first) {
+                                Circle()
+                                    .fill(.green)
+                                    .frame(width: 14, height: 14)
+                                    .overlay(Circle().stroke(.white, lineWidth: 2))
+                            }
+                        }
+                        if let last = coords.last {
+                            Annotation("End", coordinate: last) {
+                                Circle()
+                                    .fill(Color.iwError)
+                                    .frame(width: 14, height: 14)
+                                    .overlay(Circle().stroke(.white, lineWidth: 2))
+                            }
+                        }
+                    }
+                    .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
+                    .mapControlVisibility(.hidden)
+                    .allowsHitTesting(false)
+                    .frame(height: 200)
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .padding(.horizontal, 20)
+                }
+
                 // Stats Card
                 VStack(spacing: 16) {
                     SummaryRow(icon: "clock.fill", label: "Duration", value: session.elapsedFormatted, color: .iwSecondary)
@@ -525,6 +559,28 @@ private struct SummaryRow: View {
                 .monospacedDigit()
         }
     }
+}
+
+// MARK: - Animated Background
+
+// MARK: - Route region helper
+
+private func routeRegion(for coordinates: [CLLocationCoordinate2D]) -> MKCoordinateRegion {
+    let lats = coordinates.map(\.latitude)
+    let lons = coordinates.map(\.longitude)
+    guard let minLat = lats.min(), let maxLat = lats.max(),
+          let minLon = lons.min(), let maxLon = lons.max() else {
+        return MKCoordinateRegion()
+    }
+    let center = CLLocationCoordinate2D(
+        latitude: (minLat + maxLat) / 2,
+        longitude: (minLon + maxLon) / 2
+    )
+    let span = MKCoordinateSpan(
+        latitudeDelta: max((maxLat - minLat) * 1.5, 0.005),
+        longitudeDelta: max((maxLon - minLon) * 1.5, 0.005)
+    )
+    return MKCoordinateRegion(center: center, span: span)
 }
 
 // MARK: - Animated Background
