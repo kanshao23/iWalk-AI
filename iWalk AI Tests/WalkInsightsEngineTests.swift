@@ -88,9 +88,9 @@ final class WalkInsightsEngineTests: XCTestCase {
     // MARK: - weekComparison
 
     func test_weekComparison_countsThisWeekAndLastWeek() {
-        // 2 walks today = this week; 1 walk 8 days ago = last week
+        // 2 walks today = this week; 1 walk 7 days ago = last week
         let thisWeek = (0..<2).map { _ in makeSession(daysAgo: 0) }
-        let lastWeek = [makeSession(daysAgo: 8)]
+        let lastWeek = [makeSession(daysAgo: 7)]
         let result = WalkInsightsEngine.weekComparison(from: thisWeek + lastWeek)
         XCTAssertEqual(result.thisWeekWalks, 2)
         XCTAssertEqual(result.lastWeekWalks, 1)
