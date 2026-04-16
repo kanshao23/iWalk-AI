@@ -500,11 +500,11 @@ struct GlassTabBar: View {
                         selectedTab = tab
                     }
                 } label: {
+                    let isSelected = selectedTab == tab
                     VStack(spacing: 4) {
                         ZStack(alignment: .topTrailing) {
                             Image(systemName: tab.icon)
-                                .font(.system(size: 18))
-                                .scaleEffect(selectedTab == tab ? 1.15 : 1.0)
+                                .font(.system(size: 18, weight: isSelected ? .semibold : .regular))
                             if !isPremium && isProTab(tab) {
                                 Image(systemName: "lock.fill")
                                     .font(.system(size: 7, weight: .bold))
@@ -515,13 +515,19 @@ struct GlassTabBar: View {
                                     .offset(x: 7, y: -5)
                             }
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(isSelected ? Color.iwPrimary.opacity(0.15) : Color.clear)
+                        )
                         Text(tab.title)
-                            .font(IWFont.labelSmall())
+                            .font(isSelected ? IWFont.labelSmall().bold() : IWFont.labelSmall())
                     }
-                    .foregroundStyle(selectedTab == tab ? Color.iwPrimary : Color.iwOnSurfaceVariant)
+                    .foregroundStyle(isSelected ? Color.iwPrimary : Color.iwOnSurfaceVariant)
                     .frame(maxWidth: .infinity)
                     .accessibilityLabel(tab.title + (!isPremium && isProTab(tab) ? ", Pro feature" : ""))
-                    .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
             }
         }

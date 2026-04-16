@@ -69,9 +69,9 @@ struct EveningReviewCard: View {
             }
 
             Text(review.aiSummary)
-                .font(IWFont.bodyMedium())
+                .font(IWFont.bodyLarge())
                 .foregroundStyle(.white.opacity(0.85))
-                .lineSpacing(2)
+                .lineSpacing(3)
 
             Button(action: onViewDetails) {
                 HStack {

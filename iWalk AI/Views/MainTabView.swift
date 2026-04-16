@@ -52,17 +52,18 @@ struct MainTabView: View {
         .background(Color.iwSurface)
         .ignoresSafeArea(edges: .bottom)
         .onOpenURL { url in
-            guard url.scheme?.lowercased() == "iwalkai" else { return }
-            switch url.host {
-            case "active-walk":
+            guard let route = AppDeepLinkRouter.route(for: url) else { return }
+            switch route {
+            case .home:
+                selectedTab = .daily
+                openActiveWalk = false
+            case .activeWalk:
                 selectedTab = .daily
                 openActiveWalk = true
-            case "pause-walk":
+            case .pauseWalk:
                 NotificationCenter.default.post(name: .iwPauseResumeWalk, object: nil)
-            case "end-walk":
+            case .endWalk:
                 NotificationCenter.default.post(name: .iwEndWalk, object: nil)
-            default:
-                break
             }
         }
     }

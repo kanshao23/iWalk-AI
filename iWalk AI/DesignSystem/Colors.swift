@@ -66,14 +66,14 @@ extension Color {
 
     static var iwEveningGradient: LinearGradient {
         LinearGradient(
-            colors: [Color(hex: 0x1A1A3E), Color(hex: 0x2D1B4E)],
+            colors: [Color(hex: 0x004030), Color(hex: 0x005C45)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
     }
 
-    static let iwEvening = Color(hex: 0x1A1A3E)
-    static let iwEveningAccent = Color(hex: 0x9B8EC4)
+    static let iwEvening = Color(hex: 0x004030)
+    static let iwEveningAccent = Color(hex: 0x00D1A0)
 }
 
 extension Color {

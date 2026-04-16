@@ -7,6 +7,9 @@ struct TieredProgressBar: View {
     let personalGoal: PersonalGoal?
     var animatedProgress: Double?
 
+    // 每分钟更新一次，驱动时间指示器刷新
+    @State private var currentDate = Date()
+
     // Dynamic max: extends beyond 20k if user exceeds it, or if hidden achievements exist
     private var scrollableMax: Int {
         let hiddenMax = 50_000
@@ -30,11 +33,16 @@ struct TieredProgressBar: View {
     /// Expected progress based on time of day (7:00–23:00)
     private var expectedProgress: Double {
         let cal = Calendar.current
-        let hour = cal.component(.hour, from: .now)
-        let minute = cal.component(.minute, from: .now)
+        let hour = cal.component(.hour, from: currentDate)
+        let minute = cal.component(.minute, from: currentDate)
         let minutesSince7am = (hour - 7) * 60 + minute
         let wakingMinutes = 16 * 60
         return min(max(Double(minutesSince7am) / Double(wakingMinutes), 0), 1.0)
+    }
+
+    /// 当前时刻对应的"预期步数"（用于在轨道上定位 Now 圆点）
+    private var expectedSteps: Int {
+        Int(expectedProgress * Double(goalSteps))
     }
 
     private var isAheadOfSchedule: Bool {
@@ -172,6 +180,23 @@ struct TieredProgressBar: View {
                                     .frame(width: filledWidth, height: 14)
                             }
 
+                            // Time-based "Now" indicator
+                            let nowX = xPosition(for: expectedSteps, in: contentWidth)
+                            Text("Now")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color.iwTertiary)
+                                .offset(x: nowX - 14, y: -34)
+                            // Now 文字与圆点之间的连接线
+                            RoundedRectangle(cornerRadius: 1)
+                                .fill(Color.iwTertiary)
+                                .frame(width: 2, height: 10)
+                                .offset(x: nowX - 1, y: -20)
+                            Circle()
+                                .fill(Color.iwTertiary)
+                                .frame(width: 20, height: 20)
+                                .overlay(Circle().stroke(Color.iwSurfaceContainerLowest, lineWidth: 2.5))
+                                .offset(x: nowX - 10)
+
                             // Tier markers
                             ForEach(tiers) { tier in
                                 let x = xPosition(for: tier.stepsRequired, in: contentWidth)
@@ -238,6 +263,16 @@ struct TieredProgressBar: View {
         .padding(.vertical, 8)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(currentSteps) of \(goalSteps) steps")
+        // 每分钟刷新时间指示器位置
+        .onAppear {
+            currentDate = Date()
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60))
+                currentDate = Date()
+            }
+        }
     }
 
     // MARK: - Ghost walker view
