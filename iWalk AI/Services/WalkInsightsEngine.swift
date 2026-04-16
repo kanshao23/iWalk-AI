@@ -141,8 +141,11 @@ struct WalkInsightsEngine {
             return WeekComparison(thisWeekWalks: 0, lastWeekWalks: 0,
                                   thisWeekSteps: 0, lastWeekSteps: 0)
         }
-        let lastWeekStart = cal.date(byAdding: .weekOfYear, value: -1,
-                                     to: thisWeekInterval.start)!
+        guard let lastWeekStart = cal.date(byAdding: .weekOfYear, value: -1,
+                                         to: thisWeekInterval.start) else {
+            return WeekComparison(thisWeekWalks: 0, lastWeekWalks: 0,
+                                  thisWeekSteps: 0, lastWeekSteps: 0)
+        }
 
         let thisWeek = history.filter { thisWeekInterval.contains($0.startTime) }
         let lastWeek = history.filter {

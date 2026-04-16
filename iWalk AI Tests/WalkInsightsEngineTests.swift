@@ -12,8 +12,8 @@ final class WalkInsightsEngineTests: XCTestCase {
         distanceKm: Double = 3.0,
         elapsedSeconds: Int = 1500
     ) -> WalkSession {
-        var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-        comps.day = (comps.day ?? 0) - daysAgo
+        let base = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date())!
+        var comps = Calendar.current.dateComponents([.year, .month, .day], from: base)
         comps.hour = startHour
         comps.minute = 0
         let start = Calendar.current.date(from: comps)!

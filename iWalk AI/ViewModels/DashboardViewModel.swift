@@ -151,6 +151,8 @@ final class DashboardViewModel {
         )
         guard shouldUseRealData else {
             await MainActor.run { self.applyMockData() }
+            let history = ActiveWalkViewModel.loadHistory()
+            await MainActor.run { walkInsights = WalkInsightsEngine.analyze(history: history) }
             return
         }
 
