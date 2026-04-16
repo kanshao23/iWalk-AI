@@ -3,6 +3,7 @@ import SwiftUI
 struct DashboardView: View {
     @Binding var openActiveWalk: Bool
     @State private var vm = DashboardViewModel()
+    @State private var showSettings = false
     @Environment(\.coinVM) private var coinVM
     @Environment(\.streakVM) private var streakVM
     @Environment(\.journeyVM) private var journeyVM
@@ -29,6 +30,13 @@ struct DashboardView: View {
                         Spacer()
                         StreakBadgeView(streak: streakVM.streak)
                         CoinBalanceView(balance: coinVM.account.balance)
+                        Button {
+                            showSettings = true
+                        } label: {
+                            Image(systemName: "gearshape")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundStyle(Color.iwOnSurfaceVariant)
+                        }
                     }
 
                     // Hero Card: Progress + Stats (always visible)
@@ -195,6 +203,9 @@ struct DashboardView: View {
             }
             // Regenerate evening review with real data (onAppear may have run before data loaded)
             vm.generateEveningReview(coinVM: coinVM, streakVM: streakVM, journeyVM: journeyVM)
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
         }
         .sheet(isPresented: $vm.showHistory) {
             WalkHistoryView()
