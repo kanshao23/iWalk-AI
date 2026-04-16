@@ -7,7 +7,12 @@ import Combine
 
 final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var isTracking = false
+    @Published private(set) var hasLocationPermission = false
+    @Published private(set) var routeCoordinates: [CLLocationCoordinate2D] = []
+    @Published private(set) var currentCoordinate: CLLocationCoordinate2D?
+
     private let manager = CLLocationManager()
+    private var lastRouteLocation: CLLocation?
 
     override init() {
         super.init()
@@ -18,20 +23,57 @@ final class WalkLocationManager: NSObject, ObservableObject, CLLocationManagerDe
 
     func startTracking() {
         let status = manager.authorizationStatus
-        if status == .notDetermined {
+
+        switch status {
+        case .notDetermined:
+            hasLocationPermission = false
+            isTracking = false
             manager.requestWhenInUseAuthorization()
+        case .restricted, .denied:
+            isTracking = false
+            hasLocationPermission = false
+        case .authorizedWhenInUse, .authorizedAlways:
+            hasLocationPermission = true
+            isTracking = true
+            manager.startUpdatingLocation()
+        default:
+            break
         }
-        manager.startUpdatingLocation()
     }
 
     func stopTracking() {
         manager.stopUpdatingLocation()
+        isTracking = false
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last, location.horizontalAccuracy >= 0 else { return }
+
+        DispatchQueue.main.async {
+            self.currentCoordinate = location.coordinate
+
+            if let lastRouteLocation = self.lastRouteLocation, location.distance(from: lastRouteLocation) < 5 {
+                return
+            }
+
+            self.routeCoordinates.append(location.coordinate)
+            self.lastRouteLocation = location
+        }
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        if manager.authorizationStatus == .authorizedWhenInUse ||
-           manager.authorizationStatus == .authorizedAlways {
+        let status = manager.authorizationStatus
+
+        if status == .authorizedWhenInUse || status == .authorizedAlways {
+            hasLocationPermission = true
+            isTracking = true
             manager.startUpdatingLocation()
+        } else {
+            hasLocationPermission = false
+            isTracking = false
+            if status == .denied || status == .restricted {
+                manager.stopUpdatingLocation()
+            }
         }
     }
 }
@@ -107,7 +149,18 @@ private struct ActiveWalkContent: View {
         ZStack(alignment: .top) {
             // Full-screen map centered on user
             Map(position: $mapPosition) {
-                UserAnnotation()
+                if locationManager.routeCoordinates.count > 1 {
+                    MapPolyline(coordinates: locationManager.routeCoordinates)
+                        .stroke(Color.iwPrimary, lineWidth: 4)
+                }
+                if let current = locationManager.currentCoordinate {
+                    Annotation("Current location", coordinate: current) {
+                        Image(systemName: "figure.walk.circle.fill")
+                            .font(.system(size: 26))
+                            .foregroundStyle(Color.iwPrimary)
+                            .background(Circle().fill(.white).frame(width: 22, height: 22))
+                    }
+                }
             }
             .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
             .mapControlVisibility(.hidden)
@@ -118,35 +171,21 @@ private struct ActiveWalkContent: View {
             .onDisappear {
                 locationManager.stopTracking()
             }
-
-            // Top overlay — elapsed time badge
-            VStack(spacing: 4) {
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(Color.iwPrimary)
-                        .frame(width: 10, height: 10)
-                    Text(vm.elapsedFormatted)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+            .onReceive(locationManager.$routeCoordinates) { coordinates in
+                vm.updateRouteCoordinates(coordinates)
+            }
+            .overlay(alignment: .top) {
+                if !locationManager.hasLocationPermission {
+                    Text("Enable location permission to draw your route in real-time.")
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.white)
-                        .contentTransition(.numericText())
-                        .monospacedDigit()
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(.ultraThinMaterial)
-                .clipShape(Capsule())
-
-                if !vm.usesRealPedometer {
-                    Text("SIMULATED")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(.black.opacity(0.3))
-                        .clipShape(Capsule())
+                        .padding(10)
+                        .background(.black.opacity(0.45))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .padding(.top, 96)
+                        .padding(.horizontal, 16)
                 }
             }
-            .padding(.top, 60)
 
             // Bottom stats panel
             VStack(spacing: 0) {
@@ -158,6 +197,28 @@ private struct ActiveWalkContent: View {
                         .fill(.white.opacity(0.3))
                         .frame(width: 36, height: 4)
                         .padding(.top, 10)
+
+                    // Elapsed time — prominent, on dark background for readability
+                    HStack(spacing: 10) {
+                        Circle()
+                            .fill(vm.isPaused ? .white.opacity(0.3) : Color.iwPrimary)
+                            .frame(width: 10, height: 10)
+                            .opacity(vm.isPaused ? 1 : 1)
+                        Text(vm.elapsedFormatted)
+                            .font(.system(size: 36, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .contentTransition(.numericText())
+                            .monospacedDigit()
+                        if !vm.usesRealPedometer {
+                            Text("SIM")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.white.opacity(0.5))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(.white.opacity(0.12))
+                                .clipShape(Capsule())
+                        }
+                    }
 
                     // Main stats row: steps + ring + distance
                     HStack(spacing: 0) {

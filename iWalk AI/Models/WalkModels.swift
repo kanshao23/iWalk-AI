@@ -1,4 +1,5 @@
 import Foundation
+import CoreLocation
 import SwiftUI
 
 // MARK: - Walk Session
@@ -71,6 +72,7 @@ struct WalkSession: Codable, Equatable {
     let dailyGoal: Int
     let stepsBeforeWalk: Int
     var averageHeartRate: Int
+    var routePoints: [WalkRoutePoint]?
 
     var totalSteps: Int { stepsBeforeWalk + steps }
     var goalProgressBefore: Double { min(Double(stepsBeforeWalk) / Double(dailyGoal), 1.0) }
@@ -105,6 +107,16 @@ struct WalkSession: Codable, Equatable {
     }
 
     static func == (lhs: WalkSession, rhs: WalkSession) -> Bool { lhs.id == rhs.id }
+}
+
+struct WalkRoutePoint: Codable, Equatable {
+    let latitude: Double
+    let longitude: Double
+    let timestamp: Date
+
+    var clLocation: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
 }
 
 // MARK: - User
