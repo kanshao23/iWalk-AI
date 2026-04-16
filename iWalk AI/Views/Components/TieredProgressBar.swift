@@ -17,9 +17,12 @@ struct TieredProgressBar: View {
         return min(max(stepsMax, hiddenMax), hiddenMax)
     }
 
-    // Screen shows 0..goalSteps+15% padding, scrollable to max
+    // Visible area shows exactly 0..goalSteps.
+    // Goal flag lands at the right edge of the initial viewport, and
+    // Now's x position becomes screenWidth * expectedProgress — a direct
+    // linear mapping from time of day to screen position.
     private var visibleSteps: Int {
-        Int(Double(goalSteps) * 1.15)
+        goalSteps
     }
 
     private func scrollScale(screenWidth: CGFloat) -> CGFloat {
