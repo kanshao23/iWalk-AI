@@ -22,6 +22,7 @@ final class CoachViewModel {
     private let maxStoredMessages = 60
     private let messagesStorageKey = "iw_coach_messages_v1"
     private var pendingResponseCount = 0
+    private var walkInsights: WalkInsightSummary?
 
     init() {
         loadMessages()
@@ -105,6 +106,7 @@ final class CoachViewModel {
         latestHeartRate = heartRate
         weeklyActivity = weekly
         hasRealActivityData = todaySteps > 0 || !weekly.isEmpty || latestHeartRate != nil
+        walkInsights = WalkInsightsEngine.analyze(history: ActiveWalkViewModel.loadHistory())
         refreshRecommendations()
         refreshDynamicSuggestions()
     }
@@ -136,11 +138,18 @@ final class CoachViewModel {
                 )
             }
 
+            let insights = walkInsights
             let context = CoachAPIClient.CoachContext(
                 steps: todaySteps,
                 streak: streak.currentStreak,
                 goal: goalSteps,
-                userName: user.name
+                userName: user.name,
+                totalWalks: insights?.totalWalks ?? 0,
+                avgPaceMinPerKm: insights?.avgPaceMinPerKm ?? 0.0,
+                bestTimeOfDay: insights?.bestTimeOfDay.rawValue ?? "unknown",
+                paceTrend: insights?.paceTrend.rawValue ?? "stable",
+                thisWeekWalks: insights?.weekComparison.thisWeekWalks ?? 0,
+                lastWeekWalks: insights?.weekComparison.lastWeekWalks ?? 0
             )
 
             let reply: String

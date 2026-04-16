@@ -16,10 +16,18 @@ enum CoachAPIError: LocalizedError {
 
 struct CoachAPIClient {
     struct CoachContext: Encodable {
+        // Existing
         let steps: Int
         let streak: Int
         let goal: Int
         let userName: String
+        // Walk history summary (zero/unknown for new users with no history)
+        let totalWalks: Int
+        let avgPaceMinPerKm: Double
+        let bestTimeOfDay: String   // "morning" | "afternoon" | "evening" | "unknown"
+        let paceTrend: String       // "improving" | "stable" | "declining"
+        let thisWeekWalks: Int
+        let lastWeekWalks: Int
     }
 
     struct ChatMessage: Codable {
