@@ -21,6 +21,7 @@ final class DashboardViewModel {
     // Evening review
     var eveningReview: EveningReview?
     var showEveningDetails = false
+    var walkInsights: WalkInsightSummary?
 
     // Journey detail
     var showJourneyDetail = false
@@ -181,6 +182,7 @@ final class DashboardViewModel {
             }
 
             WidgetSummaryPublisher.publish(todayStats: todayStats, goal: stepGoal)
+            walkInsights = WalkInsightsEngine.analyze(history: ActiveWalkViewModel.loadHistory())
         }
     }
 
@@ -240,6 +242,7 @@ final class DashboardViewModel {
 
         WidgetSummaryPublisher.publish(todayStats: todayStats, goal: stepGoal)
         showActiveWalk = false
+        walkInsights = WalkInsightsEngine.analyze(history: ActiveWalkViewModel.loadHistory())
     }
 
     @MainActor

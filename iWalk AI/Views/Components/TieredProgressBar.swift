@@ -6,6 +6,7 @@ struct TieredProgressBar: View {
     let tiers: [StepTier]
     let personalGoal: PersonalGoal?
     var animatedProgress: Double?
+    var insights: WalkInsightSummary? = nil
 
     // 每分钟更新一次，驱动时间指示器刷新
     @State private var currentDate = Date()
@@ -47,6 +48,8 @@ struct TieredProgressBar: View {
     }
 
     private var aiInsight: String {
+        if let text = insights?.insightText { return text }
+
         let remaining = goalSteps - currentSteps
         let goalProgress = Double(currentSteps) / Double(goalSteps)
 

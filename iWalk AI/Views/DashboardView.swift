@@ -39,7 +39,8 @@ struct DashboardView: View {
                                 goalSteps: vm.stepGoal,
                                 tiers: coinVM.todayTiers,
                                 personalGoal: coinVM.personalGoal,
-                                animatedProgress: vm.animatedProgress
+                                animatedProgress: vm.animatedProgress,
+                                insights: vm.walkInsights
                             )
 
                             Divider()
