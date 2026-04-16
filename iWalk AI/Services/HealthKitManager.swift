@@ -1,14 +1,21 @@
-import Foundation
 import HealthKit
+import Foundation
 
 @Observable
+@MainActor
 final class HealthKitManager {
     static let shared = HealthKitManager()
 
-    var isAuthorized = false
     var authorizationError: String?
+    var hasRequestedAuthorization: Bool {
+        didSet {
+            UserDefaults.standard.set(hasRequestedAuthorization, forKey: Self.requestedAuthKey)
+        }
+    }
 
     private let store = HKHealthStore()
+
+    private static let requestedAuthKey = "iw_healthkit_requested"
 
     private let readTypes: Set<HKObjectType> = {
         var types = Set<HKObjectType>()
@@ -20,11 +27,7 @@ final class HealthKitManager {
     }()
 
     private init() {
-        // HealthKit read authorization can't be checked directly.
-        // We check if we've previously requested (stored in UserDefaults).
-        if HKHealthStore.isHealthDataAvailable() {
-            isAuthorized = UserDefaults.standard.bool(forKey: "iw_healthkit_authorized")
-        }
+        hasRequestedAuthorization = UserDefaults.standard.bool(forKey: Self.requestedAuthKey)
     }
 
     // MARK: - Authorization
@@ -38,10 +41,8 @@ final class HealthKitManager {
 
         do {
             try await store.requestAuthorization(toShare: [], read: readTypes)
-            // We can't directly check read authorization, but assume success after request
-            _ = await fetchTodaySteps()
-            isAuthorized = true
-            UserDefaults.standard.set(true, forKey: "iw_healthkit_authorized")
+            hasRequestedAuthorization = true
+            authorizationError = nil
             return true
         } catch {
             authorizationError = error.localizedDescription
@@ -49,9 +50,18 @@ final class HealthKitManager {
         }
     }
 
+    private func ensureHealthDataAvailable() -> Bool {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            authorizationError = "Health data not available on this device."
+            return false
+        }
+        return true
+    }
+
     // MARK: - Today's Steps
 
     func fetchTodaySteps() async -> Int {
+        guard ensureHealthDataAvailable() else { return 0 }
         guard let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return 0 }
         let start = Calendar.current.startOfDay(for: .now)
         let end = Date.now
@@ -69,6 +79,7 @@ final class HealthKitManager {
     // MARK: - Today's Distance (km)
 
     func fetchTodayDistance() async -> Double {
+        guard ensureHealthDataAvailable() else { return 0 }
         guard let distType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning) else { return 0 }
         let start = Calendar.current.startOfDay(for: .now)
         let end = Date.now
@@ -86,6 +97,7 @@ final class HealthKitManager {
     // MARK: - Today's Calories
 
     func fetchTodayCalories() async -> Int {
+        guard ensureHealthDataAvailable() else { return 0 }
         guard let calType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) else { return 0 }
         let start = Calendar.current.startOfDay(for: .now)
         let end = Date.now
@@ -103,6 +115,7 @@ final class HealthKitManager {
     // MARK: - Weekly Steps (last 7 days)
 
     func fetchWeeklySteps() async -> [DailyStats] {
+        guard ensureHealthDataAvailable() else { return [] }
         guard let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return [] }
         let calendar = Calendar.current
         let endDate = Date.now
@@ -142,6 +155,7 @@ final class HealthKitManager {
     // MARK: - Previous Week Steps (7–13 days ago)
 
     func fetchPreviousWeekSteps() async -> [DailyStats] {
+        guard ensureHealthDataAvailable() else { return [] }
         guard let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return [] }
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: .now)
@@ -180,6 +194,7 @@ final class HealthKitManager {
     // MARK: - Monthly Steps (for habits calendar)
 
     func fetchMonthlySteps(year: Int, month: Int) async -> [HabitDay] {
+        guard ensureHealthDataAvailable() else { return [] }
         guard let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return [] }
         let calendar = Calendar.current
         guard let startDate = calendar.date(from: DateComponents(year: year, month: month, day: 1)),
@@ -214,6 +229,7 @@ final class HealthKitManager {
     // MARK: - Latest Heart Rate
 
     func fetchLatestHeartRate() async -> Int? {
+        guard ensureHealthDataAvailable() else { return nil }
         guard let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return nil }
 
         return await withCheckedContinuation { continuation in
