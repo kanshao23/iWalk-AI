@@ -15,7 +15,7 @@ struct WalkLiveActivityWidget: Widget {
                         Label("Steps", systemImage: "figure.walk")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
-                        Text(context.state.totalSteps.formatted())
+                        Text(context.state.sessionSteps.formatted())
                             .font(.headline)
                             .monospacedDigit()
                     }
@@ -63,7 +63,7 @@ struct WalkLiveActivityWidget: Widget {
                     }
                 }
             } compactLeading: {
-                Text(shortStepText(context.state.totalSteps))
+                Text(shortStepText(context.state.sessionSteps))
                     .font(.caption2)
                     .monospacedDigit()
             } compactTrailing: {
@@ -119,7 +119,7 @@ private struct WalkLockScreenView: View {
 
             // Metrics
             HStack(spacing: 0) {
-                metricBlock(title: "Steps",    value: context.state.totalSteps.formatted())
+                metricBlock(title: "Steps",    value: context.state.sessionSteps.formatted())
                 metricBlock(title: "Distance", value: String(format: "%.2f km", context.state.distanceKm))
                 // Time: auto-ticking timer when active, frozen text when paused
                 VStack(alignment: .leading, spacing: 2) {

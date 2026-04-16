@@ -3,6 +3,9 @@ import ActivityKit
 
 struct WalkActivityAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
+        /// Steps walked in this session only (starts from 0 each walk).
+        var sessionSteps: Int
+        /// Total daily steps including steps before this walk (used for goal progress).
         var totalSteps: Int
         var distanceKm: Double
         /// Used as reference date for `Text(.timer)` in the widget when active.

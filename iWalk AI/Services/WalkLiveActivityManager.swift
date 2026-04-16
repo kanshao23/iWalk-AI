@@ -17,7 +17,7 @@ final class WalkLiveActivityManager {
         return activity != nil || !Activity<WalkActivityAttributes>.activities.isEmpty
     }
 
-    func start(dailyGoal: Int, totalSteps: Int, distanceKm: Double,
+    func start(dailyGoal: Int, sessionSteps: Int, totalSteps: Int, distanceKm: Double,
                startAdjustedDate: Date, elapsedSeconds: Int) {
         guard #available(iOS 16.2, *) else { return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
@@ -27,6 +27,7 @@ final class WalkLiveActivityManager {
 
         let attributes = WalkActivityAttributes(dailyGoal: dailyGoal)
         let state = WalkActivityAttributes.ContentState(
+            sessionSteps: sessionSteps,
             totalSteps: totalSteps,
             distanceKm: distanceKm,
             startAdjustedDate: startAdjustedDate,
@@ -36,7 +37,7 @@ final class WalkLiveActivityManager {
 
         if let existing = activity ?? Activity<WalkActivityAttributes>.activities.first {
             activity = existing
-            update(totalSteps: totalSteps, distanceKm: distanceKm,
+            update(sessionSteps: sessionSteps, totalSteps: totalSteps, distanceKm: distanceKm,
                    startAdjustedDate: startAdjustedDate, elapsedSeconds: elapsedSeconds,
                    isPaused: false)
             return
@@ -50,13 +51,14 @@ final class WalkLiveActivityManager {
         }
     }
 
-    func update(totalSteps: Int, distanceKm: Double,
+    func update(sessionSteps: Int, totalSteps: Int, distanceKm: Double,
                 startAdjustedDate: Date, elapsedSeconds: Int, isPaused: Bool) {
         guard #available(iOS 16.2, *) else { return }
         guard let activity = activity ?? Activity<WalkActivityAttributes>.activities.first else { return }
         self.activity = activity
 
         let state = WalkActivityAttributes.ContentState(
+            sessionSteps: sessionSteps,
             totalSteps: totalSteps,
             distanceKm: distanceKm,
             startAdjustedDate: startAdjustedDate,
@@ -67,12 +69,13 @@ final class WalkLiveActivityManager {
         Task { await activity.update(content) }
     }
 
-    func end(totalSteps: Int, distanceKm: Double,
+    func end(sessionSteps: Int, totalSteps: Int, distanceKm: Double,
              startAdjustedDate: Date, elapsedSeconds: Int) {
         guard #available(iOS 16.2, *) else { return }
         guard let activity = activity ?? Activity<WalkActivityAttributes>.activities.first else { return }
 
         let finalState = WalkActivityAttributes.ContentState(
+            sessionSteps: sessionSteps,
             totalSteps: totalSteps,
             distanceKm: distanceKm,
             startAdjustedDate: startAdjustedDate,

@@ -144,6 +144,7 @@ final class ActiveWalkViewModel {
         Task { @MainActor in
             WalkLiveActivityManager.shared.start(
                 dailyGoal: dailyGoal,
+                sessionSteps: sessionSteps,
                 totalSteps: totalSteps,
                 distanceKm: sessionDistanceKm,
                 startAdjustedDate: walkAdjustedStartDate,
@@ -176,9 +177,9 @@ final class ActiveWalkViewModel {
                 // Calories: ~0.04 kcal per step (walking average)
                 self.sessionCalories = Int(Double(self.sessionSteps) * 0.04)
                 self.checkMilestones()
-                // Always push on real step data — pedometer is infrequent and
-                // continues in background, so we want every update reflected immediately.
-                self.pushLiveActivityUpdate(force: true)
+                        // Use throttled update to prevent iOS from dropping too-frequent
+                // ActivityKit requests, which was causing distance to appear frozen.
+                self.pushLiveActivityUpdate()
             }
         }
     }
@@ -279,6 +280,7 @@ final class ActiveWalkViewModel {
     func endWalk() {
         Task { @MainActor in
             WalkLiveActivityManager.shared.end(
+                sessionSteps: sessionSteps,
                 totalSteps: totalSteps,
                 distanceKm: sessionDistanceKm,
                 startAdjustedDate: walkAdjustedStartDate,
@@ -360,6 +362,7 @@ final class ActiveWalkViewModel {
         guard force || liveActivityTick % 5 == 0 else { return }
 
         let paused = phase == .paused
+        let session = sessionSteps
         let total = totalSteps
         let distance = sessionDistanceKm
         let elapsed = elapsedSeconds
@@ -367,6 +370,7 @@ final class ActiveWalkViewModel {
 
         Task { @MainActor in
             WalkLiveActivityManager.shared.update(
+                sessionSteps: session,
                 totalSteps: total,
                 distanceKm: distance,
                 startAdjustedDate: adjustedDate,
