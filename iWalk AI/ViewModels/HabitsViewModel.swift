@@ -34,12 +34,13 @@ final class HabitsViewModel {
 
     /// Load real monthly data from HealthKit
     func loadRealData() async {
-        guard healthKit.isAuthorized else { return }
         let days = await healthKit.fetchMonthlySteps(year: currentYear, month: currentMonth)
-        if !days.isEmpty {
-            await MainActor.run {
-                monthData = MonthlyHabitData(year: currentYear, month: currentMonth, days: days)
-            }
+        guard HealthDataPresence.hasHabitRealData(monthCount: days.count) else {
+            monthData = MonthlyHabitData.mock(year: currentYear, month: currentMonth)
+            return
+        }
+        await MainActor.run {
+            monthData = MonthlyHabitData(year: currentYear, month: currentMonth, days: days)
         }
     }
 

@@ -82,8 +82,17 @@ final class DashboardViewModel {
             let steps = await healthKit.fetchTodaySteps()
             let distance = await healthKit.fetchTodayDistance()
             let calories = await healthKit.fetchTodayCalories()
-            let shouldUseRealData = healthKit.hasRequestedAuthorization || steps > 0 || distance > 0 || calories > 0
-            guard shouldUseRealData else { return }
+            let weekly = await healthKit.fetchWeeklySteps()
+            let shouldUseRealData = HealthDataPresence.hasDashboardRealData(
+                steps: steps,
+                distanceKm: distance,
+                calories: calories,
+                weeklyCount: weekly.count
+            )
+            guard shouldUseRealData else {
+                await MainActor.run { self.applyMockData() }
+                return
+            }
 
             await MainActor.run {
                 todayStats.steps = steps
@@ -108,6 +117,7 @@ final class DashboardViewModel {
                     animatedProgress = targetProgress
                 }
 
+                WidgetSummaryPublisher.publish(todayStats: todayStats, goal: stepGoal)
                 WidgetCenter.shared.reloadAllTimelines()
 
                 // Check tiers & streak with latest steps
@@ -132,8 +142,16 @@ final class DashboardViewModel {
         let distance = await healthKit.fetchTodayDistance()
         let calories = await healthKit.fetchTodayCalories()
         let weekly = await healthKit.fetchWeeklySteps()
-        let shouldUseRealData = healthKit.hasRequestedAuthorization || steps > 0 || distance > 0 || calories > 0 || !weekly.isEmpty
-        guard shouldUseRealData else { return }
+        let shouldUseRealData = HealthDataPresence.hasDashboardRealData(
+            steps: steps,
+            distanceKm: distance,
+            calories: calories,
+            weeklyCount: weekly.count
+        )
+        guard shouldUseRealData else {
+            await MainActor.run { self.applyMockData() }
+            return
+        }
 
         await MainActor.run {
             hasLoadedRealData = true
@@ -161,6 +179,8 @@ final class DashboardViewModel {
             withAnimation(.easeOut(duration: 0.6)) {
                 animatedProgress = targetProgress
             }
+
+            WidgetSummaryPublisher.publish(todayStats: todayStats, goal: stepGoal)
         }
     }
 
@@ -204,11 +224,26 @@ final class DashboardViewModel {
             animatedProgress = targetProgress
         }
 
+        WidgetSummaryPublisher.publish(todayStats: todayStats, goal: stepGoal)
         showActiveWalk = false
     }
 
+    @MainActor
+    private func applyMockData() {
+        hasLoadedRealData = false
+        todayStats = DailyStats.mockToday
+        weeklyActivity = DailyStats.mockWeek
+        isDistanceEstimated = true
+        isCaloriesEstimated = true
+        animatedSteps = todayStats.steps
+        animatedProgress = targetProgress
+        WidgetSummaryPublisher.clear()
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     func generateEveningReview(coinVM: CoinViewModel, streakVM: StreakViewModel, journeyVM: JourneyViewModel) {
-        guard isEveningMode && eveningReview == nil else { return }
+        // Regenerate if not yet created, or if previously created with 0 steps (data wasn't ready)
+        guard isEveningMode && (eveningReview == nil || eveningReview?.totalSteps == 0) else { return }
 
         eveningReview = EveningReview.generate(
             steps: currentSteps,

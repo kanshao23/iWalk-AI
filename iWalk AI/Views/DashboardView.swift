@@ -31,65 +31,62 @@ struct DashboardView: View {
                         CoinBalanceView(balance: coinVM.account.balance)
                     }
 
-                    // Evening Review or Daytime Hero Card
-                    Group {
-                        if vm.isEveningMode, let review = vm.eveningReview {
-                            AnimatedCard(delay: 0.1) {
-                                EveningReviewCard(review: review) {
-                                    vm.claimReviewCoins(coinVM: coinVM)
-                                    vm.showEveningDetails = true
-                                }
-                            }
-                            .transition(.opacity)
-                        } else {
-                            // Hero Card: Progress + Stats merged
-                            AnimatedCard(delay: 0.1) {
-                                VStack(spacing: 0) {
-                                    TieredProgressBar(
-                                        currentSteps: vm.animatedSteps,
-                                        goalSteps: vm.stepGoal,
-                                        tiers: coinVM.todayTiers,
-                                        personalGoal: coinVM.personalGoal,
-                                        animatedProgress: vm.animatedProgress
-                                    )
+                    // Hero Card: Progress + Stats (always visible)
+                    AnimatedCard(delay: 0.1) {
+                        VStack(spacing: 0) {
+                            TieredProgressBar(
+                                currentSteps: vm.animatedSteps,
+                                goalSteps: vm.stepGoal,
+                                tiers: coinVM.todayTiers,
+                                personalGoal: coinVM.personalGoal,
+                                animatedProgress: vm.animatedProgress
+                            )
 
-                                    Divider()
-                                        .padding(.horizontal, 16)
+                            Divider()
+                                .padding(.horizontal, 16)
 
-                                    HStack(spacing: 0) {
-                                        StatCard(
-                                            icon: "flame.fill",
-                                            value: "\(vm.isCaloriesEstimated ? "~" : "")\(vm.todayStats.calories)",
-                                            label: "kcal",
-                                            iconColor: .iwTertiaryContainer
-                                        )
-                                        StatCard(
-                                            icon: "mappin.and.ellipse",
-                                            value: "\(vm.isDistanceEstimated ? "~" : "")\(String(format: "%.1f", vm.todayStats.distanceKm))",
-                                            label: "km",
-                                            iconColor: .iwSecondary
-                                        )
-                                        StatCard(
-                                            icon: "clock.fill",
-                                            value: "\(vm.todayStats.activeMinutes)",
-                                            label: "mins",
-                                            iconColor: .iwPrimaryContainer
-                                        )
-                                    }
-                                    .padding(.vertical, 12)
-                                }
-                                .background(Color.iwSurfaceContainerLowest)
-                                .clipShape(RoundedRectangle(cornerRadius: 20))
+                            HStack(spacing: 0) {
+                                StatCard(
+                                    icon: "flame.fill",
+                                    value: "\(vm.isCaloriesEstimated ? "~" : "")\(vm.todayStats.calories)",
+                                    label: "kcal",
+                                    iconColor: .iwTertiaryContainer
+                                )
+                                StatCard(
+                                    icon: "mappin.and.ellipse",
+                                    value: "\(vm.isDistanceEstimated ? "~" : "")\(String(format: "%.1f", vm.todayStats.distanceKm))",
+                                    label: "km",
+                                    iconColor: .iwSecondary
+                                )
+                                StatCard(
+                                    icon: "clock.fill",
+                                    value: "\(vm.todayStats.activeMinutes)",
+                                    label: "mins",
+                                    iconColor: .iwPrimaryContainer
+                                )
                             }
-
-                            // Start Walking Button
-                            PillButton("Start Walking Now", icon: "figure.walk") {
-                                vm.startWalking()
-                            }
-                            .transition(.opacity)
+                            .padding(.vertical, 12)
                         }
+                        .background(Color.iwSurfaceContainerLowest)
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
                     }
-                    .animation(.easeInOut(duration: 0.4), value: vm.isEveningMode)
+
+                    // Start Walking Button (always visible)
+                    PillButton("Start Walking Now", icon: "figure.walk") {
+                        vm.startWalking()
+                    }
+
+                    // Evening Review (only after 8 pm, when data is ready)
+                    if vm.isEveningMode, let review = vm.eveningReview {
+                        AnimatedCard(delay: 0.0) {
+                            EveningReviewCard(review: review) {
+                                vm.claimReviewCoins(coinVM: coinVM)
+                                vm.showEveningDetails = true
+                            }
+                        }
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        .animation(.easeInOut(duration: 0.4), value: vm.isEveningMode)
+                    }
 
                     // This Week's Activity
                     AnimatedCard(delay: 0.2) {
@@ -189,9 +186,16 @@ struct DashboardView: View {
             if vm.currentSteps >= 1500 {
                 streakVM.completeTodayIfNeeded(coinVM: coinVM)
             }
+            // Regenerate evening review with real data (onAppear may have run before data loaded)
+            vm.generateEveningReview(coinVM: coinVM, streakVM: streakVM, journeyVM: journeyVM)
         }
         .sheet(isPresented: $vm.showHistory) {
             WalkHistoryView()
+        }
+        .sheet(isPresented: $vm.showEveningDetails) {
+            if let review = vm.eveningReview {
+                EveningReviewDetailSheet(review: review)
+            }
         }
         .sheet(isPresented: $vm.showJourneyDetail) {
             if let journey = journeyVM.activeJourney {

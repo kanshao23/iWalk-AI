@@ -45,11 +45,24 @@ final class BadgesViewModel {
         let hk = HealthKitManager.shared
         isLoadingComparison = true
 
-        async let thisWeekTask = hk.isAuthorized ? hk.fetchWeeklySteps() : []
-        async let prevWeekTask = hk.isAuthorized ? hk.fetchPreviousWeekSteps() : []
-        let todaySteps = hk.isAuthorized ? await hk.fetchTodaySteps() : 0
+        async let thisWeekTask = hk.fetchWeeklySteps()
+        async let prevWeekTask = hk.fetchPreviousWeekSteps()
+        let todaySteps = await hk.fetchTodaySteps()
 
         let (thisWeekData, prevWeekData) = await (thisWeekTask, prevWeekTask)
+        let shouldUseRealData = HealthDataPresence.hasBadgeComparisonRealData(
+            todaySteps: todaySteps,
+            thisWeekCount: thisWeekData.count,
+            prevWeekCount: prevWeekData.count
+        )
+        guard shouldUseRealData else {
+            thisWeekDaily = DailyStats.mockWeek
+            lastWeekDaily = DailyStats.mockWeek
+            badges = Badge.mockBadges
+            challenges = Challenge.mockChallenges
+            isLoadingComparison = false
+            return
+        }
         thisWeekDaily = thisWeekData
         lastWeekDaily = prevWeekData
 

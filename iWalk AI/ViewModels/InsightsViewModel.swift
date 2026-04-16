@@ -23,7 +23,6 @@ final class InsightsViewModel {
 
     func loadRealData() async {
         let hk = HealthKitManager.shared
-        guard hk.isAuthorized else { return }
 
         isLoadingData = true
 
@@ -32,6 +31,21 @@ final class InsightsViewModel {
         async let heartRateTask = hk.fetchLatestHeartRate()
 
         let (weekly, prevWeek, heartRate) = await (thisWeekTask, prevWeekTask, heartRateTask)
+        let shouldUseRealData = HealthDataPresence.hasInsightsRealData(
+            weeklyCount: weekly.count,
+            heartRate: heartRate
+        )
+        guard shouldUseRealData else {
+            insights = InsightCard.mockInsights
+            weeklySummary = WeeklySummary.mock
+            recommendedFocus = RecommendedFocus.mockByCategory
+            coachRecommendations = CoachRecommendation.mockRecommendations
+            weeklyReport = nil
+            chartAnimated = false
+            cardsVisible = false
+            isLoadingData = false
+            return
+        }
 
         insights             = generateInsights(weekly: weekly, heartRate: heartRate)
         weeklySummary        = generateWeeklySummary(weekly: weekly, prevWeek: prevWeek)
