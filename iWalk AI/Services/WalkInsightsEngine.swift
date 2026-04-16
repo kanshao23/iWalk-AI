@@ -26,5 +26,23 @@ struct WalkInsightSummary {
 }
 
 struct WalkInsightsEngine {
-    // Implementation added in later tasks
+
+    /// Compares average pace of the 3 most recent walks vs the 3 before them.
+    /// Requires ≥6 walks with distance > 0.01 km; returns .stable otherwise.
+    static func paceTrend(from history: [WalkSession]) -> PaceTrend {
+        let withPace = history.filter { $0.paceMinPerKm > 0 }
+        guard withPace.count >= 6 else { return .stable }
+
+        let recentPaces   = withPace.prefix(3).map(\.paceMinPerKm)
+        let previousPaces = withPace.dropFirst(3).prefix(3).map(\.paceMinPerKm)
+
+        let recentAvg = recentPaces.reduce(0, +) / Double(recentPaces.count)
+        let prevAvg   = previousPaces.reduce(0, +) / Double(previousPaces.count)
+        guard prevAvg > 0 else { return .stable }
+
+        let change = (recentAvg - prevAvg) / prevAvg
+        if change < -0.05 { return .improving }
+        if change >  0.05 { return .declining }
+        return .stable
+    }
 }
