@@ -67,6 +67,72 @@ struct WalkInsightsEngine {
         return winner.key
     }
 
+    /// Formats a pace value as "M:SS min/km".
+    private static func formatPace(_ pace: Double) -> String {
+        guard pace > 0, pace < 100 else { return "--:--" }
+        let mins = Int(pace)
+        let secs = Int((pace - Double(mins)) * 60)
+        return String(format: "%d:%02d", mins, secs)
+    }
+
+    /// Average pace of up to the 5 most recent walks that have valid distance.
+    private static func averagePace(from history: [WalkSession]) -> Double {
+        let valid = history.filter { $0.paceMinPerKm > 0 }.prefix(5)
+        guard !valid.isEmpty else { return 0 }
+        return valid.map(\.paceMinPerKm).reduce(0, +) / Double(valid.count)
+    }
+
+    /// Returns nil when history < 3 walks (caller should use its own fallback).
+    private static func insightText(
+        history: [WalkSession],
+        paceTrend: PaceTrend,
+        bestTimeOfDay: TimeOfDay,
+        weekComparison: WeekComparison
+    ) -> String? {
+        guard history.count >= 3 else { return nil }
+
+        // 7+ walks AND known time of day → personal pattern
+        if history.count >= 7 {
+            let trendSuffix = paceTrend == .improving ? " — pace improving" : ""
+            switch bestTimeOfDay {
+            case .morning:
+                return "You walk best in the morning\(trendSuffix). \(weekComparison.thisWeekWalks) walks this week."
+            case .afternoon:
+                return "Afternoon is your sweet spot\(trendSuffix). \(weekComparison.thisWeekWalks) walks this week."
+            case .evening:
+                return "Evening walks are your habit\(trendSuffix). \(weekComparison.thisWeekWalks) walks this week."
+            case .unknown:
+                break
+            }
+        }
+
+        // 3–6 walks OR unknown time of day → consistency + pace
+        let avg = averagePace(from: history)
+        let paceStr = formatPace(avg)
+        let count = weekComparison.thisWeekWalks
+        let word = count == 1 ? "walk" : "walks"
+        return "\(count) \(word) this week · avg pace \(paceStr) min/km"
+    }
+
+    /// Main entry point. insightText is nil when history < 3 walks.
+    static func analyze(history: [WalkSession]) -> WalkInsightSummary {
+        let trend = paceTrend(from: history)
+        let tod   = bestTimeOfDay(from: history)
+        let week  = weekComparison(from: history)
+        let text  = insightText(history: history, paceTrend: trend,
+                                bestTimeOfDay: tod, weekComparison: week)
+        let avg   = averagePace(from: history)
+
+        return WalkInsightSummary(
+            insightText: text,
+            paceTrend: trend,
+            bestTimeOfDay: tod,
+            weekComparison: week,
+            totalWalks: history.count,
+            avgPaceMinPerKm: avg
+        )
+    }
+
     /// Groups sessions into the current and previous calendar week (weekOfYear).
     static func weekComparison(from history: [WalkSession]) -> WeekComparison {
         let cal = Calendar.current

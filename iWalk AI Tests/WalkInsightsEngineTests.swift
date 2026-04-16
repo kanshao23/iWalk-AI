@@ -111,4 +111,35 @@ final class WalkInsightsEngineTests: XCTestCase {
         XCTAssertEqual(result.thisWeekSteps, 0)
         XCTAssertEqual(result.lastWeekSteps, 0)
     }
+
+    // MARK: - analyze / insightText
+
+    func test_analyze_insightTextNil_whenFewerThan3Walks() {
+        let history = (0..<2).map { makeSession(daysAgo: $0) }
+        XCTAssertNil(WalkInsightsEngine.analyze(history: history).insightText)
+    }
+
+    func test_analyze_consistencyTier_with3to6Walks() {
+        let history = (0..<4).map { makeSession(daysAgo: $0) }
+        let summary = WalkInsightsEngine.analyze(history: history)
+        XCTAssertNotNil(summary.insightText)
+        XCTAssertTrue(summary.insightText!.contains("walk"))
+        XCTAssertTrue(summary.insightText!.contains("min/km"))
+    }
+
+    func test_analyze_patternTier_with7PlusWalksAndKnownTimeOfDay() {
+        // 7 morning walks → bestTimeOfDay = .morning → pattern insight
+        let history = (0..<7).map { makeSession(startHour: 8, daysAgo: $0) }
+        let summary = WalkInsightsEngine.analyze(history: history)
+        XCTAssertNotNil(summary.insightText)
+        XCTAssertTrue(summary.insightText!.lowercased().contains("morning"))
+    }
+
+    func test_analyze_totalWalksAndAvgPacePopulated() {
+        // 6 walks, each 3.0 km in 1500s → paceMinPerKm = 8.33
+        let history = (0..<6).map { makeSession(daysAgo: $0, distanceKm: 3.0, elapsedSeconds: 1500) }
+        let summary = WalkInsightsEngine.analyze(history: history)
+        XCTAssertEqual(summary.totalWalks, 6)
+        XCTAssertGreaterThan(summary.avgPaceMinPerKm, 0)
+    }
 }
